@@ -96,14 +96,12 @@ class TelnetClient(AbstractClient):
 class _TelnetServer(Service):
     EVENTS = selectors.EVENT_READ | selectors.EVENT_WRITE
     
-    def __init__(self, target, listen_host, listen_port, linebreak="\r", verbose=0):
+    def __init__(self, listen_host, listen_port, *args, linebreak="\r", verbose=0, **xargs):
+        super().__init__(host=listen_host, port=listen_port, *args, **xargs, verbose=1)
         self._send = {}
-        self.verbose = verbose
-        self.target = target
         self._break = linebreak
         if self.verbose >= 1:
-            print(f"[{self.__class__.__name__}] Operating on {self.target.uri}", file=sys.stderr)
-        super().__init__(host=listen_host, port=listen_port, verbose=1)
+            print(f"[{self.__class__.__name__}] Operating on {self.uri}", file=sys.stderr)
 
     def connection(self, conn, mask):
         if conn not in self._send: self._send[conn] = b""
@@ -113,8 +111,8 @@ class _TelnetServer(Service):
         try: decoded = data.strip().decode()
         except: return print(traceback.format_exc())
         for data in decoded.replace("\n","\r").split("\r"):
-            if self.verbose >= 1: print("%s $ %s"%(self.target.uri,data))
-            try: self.target.on_receive_raw_data(data)
+            if self.verbose >= 1: print("%s $ %s"%(self.uri, data))
+            try: self.on_receive_raw_data(data)
             except Exception as e: print(traceback.format_exc())
         
     def write(self, conn):
@@ -125,33 +123,19 @@ class _TelnetServer(Service):
         except OSError: pass
         self._send[conn] = self._send[conn][l:]
     
-    def on_target_send(self, data):
+    def send(self, data):
         if self.verbose >= 1: print(data)
-        encoded = ("%s%s"%(data,self._break)).encode("ascii")
+        encoded = ("%s%s"%(data, self._break)).encode("ascii")
         # send to all connected listeners
         for conn in self._send: self._send[conn] += encoded
 
 
-class TelnetServer(AbstractServer):
+class TelnetServer(_TelnetServer, AbstractServer):
     init_args_help = ("//LISTEN_IP", "LISTEN_PORT")
-    _server = None
     
-    def __init__(self, listen_host="127.0.0.1", listen_port=0, linebreak="\r", *args, verbose=0, **xargs):
-        super().__init__(*args, verbose=max(0, verbose-1), **xargs)
+    def __init__(self, listen_host="127.0.0.1", listen_port=0, *args, verbose=0, **xargs):
         if listen_host.startswith("//"): listen_host = listen_host[2:]
-        self._server = _TelnetServer(self, listen_host, int(listen_port), linebreak, verbose=verbose)
-    
-    host = property(lambda self: self._server.sock.getsockname()[0])
-    port = property(lambda self: self._server.sock.getsockname()[1])
-
-    def enter(self):
-        self._server.start()
-        super().enter()
-
-    def exit(self):
-        time.sleep(.1)
-        super().exit()
-        self._server.stop()
+        super().__init__(listen_host, int(listen_port), *args, verbose=max(0, verbose-1), **xargs)
 
     def new_attached_client(self, *args, **xargs):
         client = super().new_attached_client(None, *args, **xargs)
@@ -162,8 +146,6 @@ class TelnetServer(AbstractServer):
                 client.connect()
         self.bind(enter=on_enter)
         return client
-
-    def send(self, data): return self._server.on_target_send(data)
 
 
 class TelnetScheme(AbstractScheme):

@@ -22,6 +22,8 @@ class Service(AbstractMainloopManager):
         self.address = (host, port)
         self._verbose = verbose
 
+    host = property(lambda self: self.sock.getsockname()[0])
+    port = property(lambda self: self.sock.getsockname()[1])
 
     def enter(self):
         self.sock = socket.socket()
