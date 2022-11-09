@@ -25,18 +25,18 @@ class AutoConnect(_Base):
     @log_call
     def on_sigterm(self, sig, frame):
         """ when shutting down computer """
-        self.target.exit()
+        self.target.stop()
         super().on_sigterm(sig, frame)
         
     @log_call
     def on_suspend(self):
         super().on_suspend()
-        self.target.exit()
+        self.target.stop()
 
     @log_call
     def on_resume(self):
         """ Is being executed after resume computer from suspension """
-        self.target.enter()
+        self.target.start()
         super().on_resume()
 
 

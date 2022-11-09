@@ -321,7 +321,7 @@ class MenuScreen(_MenuScreen):
     def __init__(self, *args, **xargs):
         super().__init__(*args, **xargs)
         self.target.features.name.bind(self.set_title)
-        self.target.enter()
+        self.target.start()
     
     def set_title(self, name):
         App.get_running_app().title = "%s – %s"%(TITLE, name)
@@ -361,7 +361,7 @@ class MenuScreen(_MenuScreen):
 
     def on_enter(self): self.panel.addFeaturesFromStack()
         
-    def on_leave(self): self.target.exit()
+    def on_leave(self): self.target.stop()
 
 
 def show_widget(w):
@@ -413,7 +413,7 @@ def main():
         app.icon = icon_path
         app.run()
     finally:
-        try: app.target.exit()
+        try: app.target.stop()
         except: pass
         os.remove(icon_path)
 

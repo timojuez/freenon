@@ -174,18 +174,18 @@ class Base:
             Thread(target=self.set_new_target, name="set_new_target", daemon=True).start()
 
     def set_new_target(self):
-        if self.target: self.target.exit()
+        if self.target: self.target.stop()
         try: self.target = Target(self.uri, connect=False)
         except Exception as e:
             sys.stderr.write(f"Could not create target for URI '{self.uri}': {e}\n")
             self.target = None
         else:
-            self.target.enter()
+            self.target.start()
             self.window.set_page_complete(self._device_settings, True)
 
     def on_window_close(self, *args):
         if self.target:
-            self.target.exit()
+            self.target.stop()
             self.target = None
         super().on_window_close(*args)
 

@@ -16,12 +16,12 @@ class ClientRepeaterMixin:
 
     def enter(self):
         super().enter()
-        self._client.enter()
+        self._client.start()
         self.uri = f"{self.scheme_id}:{self._client.uri}"
 
     def exit(self):
         super().exit()
-        self._client.exit()
+        self._client.stop()
 
     def on_receive_raw_data(self, data):
         try: self._client.send(data)

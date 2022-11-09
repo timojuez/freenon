@@ -6,15 +6,14 @@ values from a Telnet or non-Telnet server. A client supports features. See featu
 import sys, re
 from abc import ABCMeta
 from urllib.parse import parse_qsl
-from threading import Thread, Event
 from datetime import datetime, timedelta
-from ..util import log_call, Bindable
+from ..util import log_call, Bindable, AbstractMainloopManager
 from .types import SchemeType, ServerType, ClientType
 from .discovery import DiscoverySchemeMixin
 from . import features
 
 
-class AbstractTarget(Bindable):
+class AbstractTarget(Bindable, AbstractMainloopManager):
     """ A server or client instance """
     verbose = 0
     connected = False
@@ -38,14 +37,6 @@ class AbstractTarget(Bindable):
         return (isinstance(target, AbstractTarget)
             and self.uri == target.uri
             and isinstance(self, self.Scheme.Client) == isinstance(target, self.Scheme.Client))
-
-    def __enter__(self): self.enter(); return self
-
-    def __exit__(self, type, value, tb): self.exit()
-
-    def enter(self): pass
-    
-    def exit(self): pass
 
     def update_uri(self, *args): self.uri = ":".join(map(str, [self.scheme_id, *args]))
 
@@ -101,13 +92,13 @@ class AttachedClientMixin:
     _control_server = False
 
     def enter(self):
-        if control_server := not self._server.connected: self._server.enter()
+        if control_server := not self._server.connected: self._server.start()
         self._control_server = control_server
         super().enter()
 
     def exit(self):
-        if self._control_server: self._server.exit()
         super().exit()
+        if self._control_server: self._server.stop()
 
 
 class AbstractServer(ServerType, AbstractTarget):
@@ -119,9 +110,14 @@ class AbstractServer(ServerType, AbstractTarget):
         for f in self.features.values():
             not f.id=="fallback" and f.bind(on_change=lambda *_,f=f: self.connected and f.resend())
     
-    def enter(self): self.connected = True
-    def exit(self): self.connected = False
-    
+    def enter(self):
+        self.connected = True
+        return super().enter()
+
+    def exit(self):
+        super().exit()
+        self.connected = False
+
     def new_attached_client(self, *args, **xargs):
         """ return new Client instance that connects to this server. Should be overwritten in inheriting classes """
         Client = self.Scheme._new_target(self.Scheme.Client)
@@ -240,27 +236,19 @@ class _AbstractClient(ClientType, AbstractTarget):
     """
     init_args_help = None # tuple
     connected = False
-    _mainloopt = None
-    _stoploop = Event
     _connect_on_enter = False
 
     def __init__(self, *args, connect=True, **xargs):
         super().__init__(*args, **xargs)
-        self._stoploop = self._stoploop()
         self._connect_on_enter = connect
     
     def enter(self):
         if self._connect_on_enter: self.connect()
-        self._stoploop.clear()
-        self._mainloopt = Thread(target=self.mainloop, name=self.__class__.__name__, daemon=True)
-        self._mainloopt.start()
         return super().enter()
 
-    def exit(self):
-        super().exit()
-        self._stoploop.set()
+    def mainloop_quit(self):
+        super().mainloop_quit()
         self.disconnect()
-        self._mainloopt.join()
         if self.connected: self.on_disconnected()
 
     def connect(self): pass
@@ -289,14 +277,6 @@ class _AbstractClient(ClientType, AbstractTarget):
         
     @log_call
     def on_disconnected(self): self.connected = False
-
-    def mainloop(self):
-        """ listens on server for events and calls on_feature_change. Return when connection closed """
-        while not self._stoploop.is_set(): self.mainloop_hook()
-        
-    def mainloop_hook(self):
-        """ This will be called regularly by mainloop """
-        pass
 
     def handle_query(self, *args, **xargs):
         self.connect()
