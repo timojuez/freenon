@@ -51,7 +51,10 @@ class Service(AbstractMainloopManager):
             callback(key.fileobj, mask)
 
     def accept(self, sock, mask):
-        conn, addr = sock.accept()
+        try: conn, addr = sock.accept()
+        except OSError as e:
+            if self._verbose > 1: print(repr(e), file=sys.stderr)
+            return
         conn.setblocking(False)
         self.sel.register(conn, self.EVENTS, self.connection)
         
