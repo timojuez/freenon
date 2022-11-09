@@ -145,13 +145,13 @@ class TelnetServer(AbstractServer):
     port = property(lambda self: self._server.sock.getsockname()[1])
 
     def enter(self):
-        self._server.enter()
+        self._server.start()
         super().enter()
 
     def exit(self):
         time.sleep(.1)
         super().exit()
-        self._server.exit()
+        self._server.stop()
 
     def new_attached_client(self, *args, **xargs):
         client = super().new_attached_client(None, *args, **xargs)

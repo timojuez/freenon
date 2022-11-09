@@ -5,50 +5,50 @@ The function "send" sends dicts.
 
 import selectors, socket, json, sys
 from threading import Thread
+from . import AbstractMainloopManager
 
 
 PORT=654321
 
 
-class Service(object):
+class Service(AbstractMainloopManager):
     """
     A service communicating with Json objects. Call enter() after init.
     """
     EVENTS = selectors.EVENT_READ #| selectors.EVENT_WRITE
-    running = True
     
     def __init__(self, host="127.0.0.1", port=PORT, verbose=0):
-        self.host = host
-        self.port = port
+        super().__init__()
+        self.address = (host, port)
         self._verbose = verbose
 
-    def __enter__(self): self.enter(); return self
-    def __exit__(self, *args, **xargs): self.exit()
 
     def enter(self):
         self.sock = socket.socket()
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.sock.bind((self.host, self.port))
-        self.sel = selectors.DefaultSelector()
+        self.sock.bind(self.address)
         if self._verbose > 0: print(
             "[%s] Listening on %s:%d"%(self.__class__.__name__,*self.sock.getsockname()), file=sys.stderr)
         self.sock.listen(100)
         self.sock.setblocking(False)
+        self.sel = selectors.DefaultSelector()
         self.sel.register(self.sock, selectors.EVENT_READ, self.accept)
-        self.running = True
-        Thread(target=self.mainloop, daemon=True, name="TelnetService.mainloop").start()
+        return super().enter()
+
+    def mainloop_quit(self):
+        super().mainloop_quit()
+        self.sock.shutdown(socket.SHUT_RDWR)
 
     def exit(self):
-        self.running = False
-        #self.sock.shutdown(socket.SHUT_RDWR)
+        super().exit()
         self.sock.close()
-    
-    def mainloop(self):
-        while self.running:
-            events = self.sel.select()
-            for key, mask in events:
-                callback = key.data
-                callback(key.fileobj, mask)
+
+    def mainloop_hook(self):
+        super().mainloop_hook()
+        events = self.sel.select(5)
+        for key, mask in events:
+            callback = key.data
+            callback(key.fileobj, mask)
 
     def accept(self, sock, mask):
         conn, addr = sock.accept()
