@@ -95,12 +95,10 @@ class TelnetClient(AbstractClient):
 
 class TelnetServer(Service, AbstractServer):
     init_args_help = ("//LISTEN_IP", "LISTEN_PORT")
-    EVENTS = selectors.EVENT_READ | selectors.EVENT_WRITE
     
     def __init__(self, listen_host="127.0.0.1", listen_port=0, *args, linebreak="\r", verbose=1, **xargs):
         if listen_host.startswith("//"): listen_host = listen_host[2:]
         super().__init__(host=listen_host, port=listen_port, *args, **xargs, verbose=verbose)
-        self._send = {}
         self._break = linebreak
         if self.verbose >= 1:
             print(f"[{self.__class__.__name__}] Operating on {self.uri}", file=sys.stderr)
@@ -115,10 +113,6 @@ class TelnetServer(Service, AbstractServer):
         self.bind(enter=on_enter)
         return client
 
-    def connection(self, conn, mask):
-        if conn not in self._send: self._send[conn] = b""
-        return super().connection(conn, mask)
-
     def read(self, data):
         try: decoded = data.strip().decode()
         except: return print(traceback.format_exc())
@@ -126,20 +120,11 @@ class TelnetServer(Service, AbstractServer):
             if self.verbose >= 1: print("%s $ %s"%(self.uri, data))
             try: self.on_receive_raw_data(data)
             except Exception as e: print(traceback.format_exc())
-        
-    def write(self, conn):
-        time.sleep(.05)
-        if not self._send[conn]: return
-        l = len(self._send[conn])
-        try: conn.sendall(self._send[conn][:l])
-        except OSError: pass
-        self._send[conn] = self._send[conn][l:]
-    
+
     def send(self, data):
         if self.verbose >= 1: print(data)
         encoded = ("%s%s"%(data, self._break)).encode("ascii")
-        # send to all connected listeners
-        for conn in self._send: self._send[conn] += encoded
+        self.write(encoded)
 
 
 class TelnetScheme(AbstractScheme):

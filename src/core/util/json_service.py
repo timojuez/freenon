@@ -5,6 +5,7 @@ The function "send" sends dicts.
 
 import selectors, socket, json, sys
 from threading import Thread
+from queue import Queue, Empty
 from . import AbstractMainloopManager
 
 
@@ -38,6 +39,7 @@ class Service(AbstractMainloopManager):
         self.sel.register(self._sockets["main"], selectors.EVENT_READ, self.accept)
         self._sockets["read"], self._sockets["write"] = socket.socketpair()
         self.sel.register(self._sockets["read"], selectors.EVENT_READ)
+        self._send_queue = {}
         return super().enter()
 
     def break_select(self):
@@ -62,6 +64,12 @@ class Service(AbstractMainloopManager):
                 break
             callback = key.data
             callback(key.fileobj, mask)
+        for conn, queue in self._send_queue.items():
+            try: msg = queue.get(block=False)
+            except Empty: pass
+            else:
+                try: conn.sendall(msg)
+                except OSError: pass
 
     def accept(self, sock, mask):
         try: conn, addr = sock.accept()
@@ -69,6 +77,7 @@ class Service(AbstractMainloopManager):
             if self._verbose > 1: print(repr(e), file=sys.stderr)
             return
         conn.setblocking(False)
+        self._send_queue[conn] = Queue()
         self.sel.register(conn, self.EVENTS, self.connection)
         
     def connection(self, conn, mask):
@@ -81,11 +90,18 @@ class Service(AbstractMainloopManager):
             else:
                 self.sel.unregister(conn)
                 conn.close()
-        if mask & selectors.EVENT_WRITE: self.write(conn)
+                del self._send_queue[conn]
 
-    def read(self, data): pass
-    def write(self, conn): pass
-    
+    def read(self, data): raise NotImplementedError()
+
+    def write(self, msg, conn=None):
+        if conn:
+            self._send_queue[conn].put(msg)
+        else:
+            for conn, queue in self._send_queue.items():
+                queue.put(msg)
+        self.break_select()
+
 
 class JsonService(Service):
 
