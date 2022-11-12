@@ -28,12 +28,13 @@ class _Abstract(AbstractMainloopManager):
     port = property(lambda self: self._sockets["main"].getsockname()[1])
 
     def enter(self):
-        self._sockets["main"].setblocking(False)
-        self.sel = selectors.DefaultSelector()
         self._sockets["read"], self._sockets["write"] = socket.socketpair()
-        self.sel.register(self._sockets["read"], selectors.EVENT_READ)
         self._send_queue = {}
         return super().enter()
+
+    def connect(self):
+        self.sel = selectors.DefaultSelector()
+        self.sel.register(self._sockets["read"], selectors.EVENT_READ)
 
     def trigger_mainloop(self):
         self._sockets["write"].send(b"\x00")
@@ -90,14 +91,19 @@ class _Abstract(AbstractMainloopManager):
 class Server(_Abstract):
 
     def enter(self):
+        try: return super().enter()
+        finally: self.connect()
+
+    def connect(self):
+        super().connect()
         self._sockets["main"] = socket.socket()
+        self._sockets["main"].setblocking(False)
         self._sockets["main"].setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self._sockets["main"].bind(self.address)
         if self._verbose > 0:
             print(f"[{type(self).__name__}] Listening on {self.host}:{self.port}", file=sys.stderr)
         self._sockets["main"].listen(100)
-        try: return super().enter()
-        finally: self.sel.register(self._sockets["main"], selectors.EVENT_READ, self.accept)
+        self.sel.register(self._sockets["main"], selectors.EVENT_READ, self.accept)
 
     def accept(self, sock, mask):
         try: conn, addr = sock.accept()
@@ -111,10 +117,12 @@ class Server(_Abstract):
 
 class Client(_Abstract):
 
-    def enter(self):
-        self._sockets["main"] = socket.create_connection((host, port), timeout)
-        try: return super().enter()
-        finally: self.sel.register(self._sockets["main"], selectors.EVENT_READ, self.connection)
+    def connect(self):
+        super().connect()
+        self._sockets["main"] = socket.create_connection(self.address, timeout)
+        self._sockets["main"].setblocking(False)
+        self._send_queue[self._sockets["main"]] = Queue()
+        self.sel.register(self._sockets["main"], selectors.EVENT_READ, self.connection)
 
 
 class JsonService(Server):
