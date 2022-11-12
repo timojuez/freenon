@@ -16,7 +16,6 @@ class _Abstract(AbstractMainloopManager):
     """
     Call enter() after init.
     """
-    EVENTS = selectors.EVENT_READ
     
     def __init__(self, host="127.0.0.1", port=PORT, verbose=0):
         super().__init__()
@@ -111,7 +110,7 @@ class Server(_Abstract):
             return
         conn.setblocking(False)
         self._send_queue[conn] = Queue()
-        self.sel.register(conn, self.EVENTS, self.connection)
+        self.sel.register(conn, selectors.EVENT_READ, self.connection)
 
 
 class Client(_Abstract):
