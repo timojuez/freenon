@@ -31,8 +31,8 @@ class Service(AbstractMainloopManager):
         self._sockets["main"] = socket.socket()
         self._sockets["main"].setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self._sockets["main"].bind(self.address)
-        if self._verbose > 0: print(
-            "[%s] Listening on %s:%d"%(self.__class__.__name__,*self._sockets["main"].getsockname()), file=sys.stderr)
+        if self._verbose > 0:
+            print(f"[{type(self).__name__}] Listening on {self.host}:{self.port}", file=sys.stderr)
         self._sockets["main"].listen(100)
         self._sockets["main"].setblocking(False)
         self.sel = selectors.DefaultSelector()
