@@ -15,7 +15,7 @@ class Service(AbstractMainloopManager):
     """
     A service communicating with Json objects. Call enter() after init.
     """
-    EVENTS = selectors.EVENT_READ #| selectors.EVENT_WRITE
+    EVENTS = selectors.EVENT_READ
     
     def __init__(self, host="127.0.0.1", port=PORT, verbose=0):
         super().__init__()
@@ -35,7 +35,12 @@ class Service(AbstractMainloopManager):
         self.sock.setblocking(False)
         self.sel = selectors.DefaultSelector()
         self.sel.register(self.sock, selectors.EVENT_READ, self.accept)
+        self._socket_read, self._sock_write = socket.socketpair()
+        self.sel.register(self._socket_read, selectors.EVENT_READ)
         return super().enter()
+
+    def break_select(self):
+        self._sock_write.send(b"\x00")
 
     def mainloop_quit(self):
         super().mainloop_quit()
@@ -43,12 +48,16 @@ class Service(AbstractMainloopManager):
 
     def exit(self):
         super().exit()
-        self.sock.close()
+        for sock in [self.sock, self._socket_read, self._sock_write]:
+            sock.close()
 
     def mainloop_hook(self):
         super().mainloop_hook()
         events = self.sel.select(5)
         for key, mask in events:
+            if key.fileobj is self._socket_read: # called break_select()
+                self._socket_read.recv(1)
+                break
             callback = key.data
             callback(key.fileobj, mask)
 
