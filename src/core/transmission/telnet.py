@@ -113,7 +113,7 @@ class TelnetServer(Server, AbstractServer):
         self.bind(enter=on_enter)
         return client
 
-    def read(self, data):
+    def read(self, data, conn):
         try: decoded = data.strip().decode()
         except: return print(traceback.format_exc())
         for data in decoded.replace("\n","\r").split("\r"):

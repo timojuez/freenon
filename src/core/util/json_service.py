@@ -69,13 +69,13 @@ class _Abstract(AbstractMainloopManager):
         except ConnectionError as e:
             print(e, file=sys.stderr)
             data = None
-        if data: self.read(data)
+        if data: self.read(data, conn)
         else:
             self.sel.unregister(conn)
             conn.close()
             del self._send_queue[conn]
 
-    def read(self, data): raise NotImplementedError()
+    def read(self, data, conn): raise NotImplementedError()
 
     def write(self, msg, conn=None):
         if conn:
@@ -124,7 +124,7 @@ class Client(_Abstract):
 
 class JsonService(Server):
 
-    def read(self, data):
+    def read(self, data, conn):
         try:
             d = json.loads(data.decode())
             if self._verbose > 1: print(
