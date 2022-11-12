@@ -42,7 +42,7 @@ class Service(AbstractMainloopManager):
         self._send_queue = {}
         return super().enter()
 
-    def break_select(self):
+    def trigger_mainloop(self):
         self._sockets["write"].send(b"\x00")
 
     def mainloop_quit(self):
@@ -59,7 +59,7 @@ class Service(AbstractMainloopManager):
         super().mainloop_hook()
         events = self.sel.select(5)
         for key, mask in events:
-            if key.fileobj is self._sockets["read"]: # called break_select()
+            if key.fileobj is self._sockets["read"]: # called trigger_mainloop()
                 self._sockets["read"].recv(1)
                 break
             callback = key.data
@@ -100,7 +100,7 @@ class Service(AbstractMainloopManager):
         else:
             for conn, queue in self._send_queue.items():
                 queue.put(msg)
-        self.break_select()
+        self.trigger_mainloop()
 
 
 class JsonService(Service):
