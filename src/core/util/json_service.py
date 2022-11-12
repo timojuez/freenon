@@ -31,6 +31,12 @@ class _Abstract(AbstractMainloopManager):
         self._send_queue = {}
         return super().enter()
 
+    def exit(self):
+        super().exit()
+        while self._sockets:
+            name, sock = self._sockets.popitem()
+            sock.close()
+
     def connect(self):
         self.sel = selectors.DefaultSelector()
         self.sel.register(self._sockets["read"], selectors.EVENT_READ)
@@ -41,12 +47,6 @@ class _Abstract(AbstractMainloopManager):
     def mainloop_quit(self):
         super().mainloop_quit()
         self._sockets["main"].shutdown(socket.SHUT_RDWR)
-
-    def exit(self):
-        super().exit()
-        while self._sockets:
-            name, sock = self._sockets.popitem()
-            sock.close()
 
     def mainloop_hook(self):
         super().mainloop_hook()
