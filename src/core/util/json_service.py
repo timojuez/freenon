@@ -18,13 +18,17 @@ class Base(AbstractMainloopManager):
     """
     
     def __init__(self, host="127.0.0.1", port=PORT, *args, verbose=0, **xargs):
-        super().__init__(*args, **xargs)
         self.address = (host, port)
         self._sockets = {}
         self._verbose = verbose
+        super().__init__(*args, **xargs)
 
-    host = property(lambda self: self._sockets["main"].getsockname()[0])
-    port = property(lambda self: self._sockets["main"].getsockname()[1])
+    def _get_sock_name(self, i):
+        if sock := self._sockets.get("main"): return sock.getsockname()[i]
+        else: return self.address[i]
+
+    host = property(lambda self: self._get_sock_name(0))
+    port = property(lambda self: self._get_sock_name(1))
 
     def enter(self):
         self._sockets["read"], self._sockets["write"] = socket.socketpair()
