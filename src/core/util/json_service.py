@@ -96,13 +96,12 @@ class Server(_Abstract):
 
     def connect(self):
         super().connect()
-        self._sockets["main"] = socket.socket()
+        self._sockets["main"] = socket.create_server(self.address, backlog=100)
         self._sockets["main"].setblocking(False)
-        self._sockets["main"].setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self._sockets["main"].bind(self.address)
+        try: self._sockets["main"].setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        except: pass
         if self._verbose > 0:
             print(f"[{type(self).__name__}] Listening on {self.host}:{self.port}", file=sys.stderr)
-        self._sockets["main"].listen(100)
         self.sel.register(self._sockets["main"], selectors.EVENT_READ, self.accept)
 
     def accept(self, sock, mask):
