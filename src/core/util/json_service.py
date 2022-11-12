@@ -20,43 +20,45 @@ class Service(AbstractMainloopManager):
     def __init__(self, host="127.0.0.1", port=PORT, verbose=0):
         super().__init__()
         self.address = (host, port)
+        self._sockets = {}
         self._verbose = verbose
 
-    host = property(lambda self: self.sock.getsockname()[0])
-    port = property(lambda self: self.sock.getsockname()[1])
+    host = property(lambda self: self._sockets["main"].getsockname()[0])
+    port = property(lambda self: self._sockets["main"].getsockname()[1])
 
     def enter(self):
-        self.sock = socket.socket()
-        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.sock.bind(self.address)
+        self._sockets["main"] = socket.socket()
+        self._sockets["main"].setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self._sockets["main"].bind(self.address)
         if self._verbose > 0: print(
-            "[%s] Listening on %s:%d"%(self.__class__.__name__,*self.sock.getsockname()), file=sys.stderr)
-        self.sock.listen(100)
-        self.sock.setblocking(False)
+            "[%s] Listening on %s:%d"%(self.__class__.__name__,*self._sockets["main"].getsockname()), file=sys.stderr)
+        self._sockets["main"].listen(100)
+        self._sockets["main"].setblocking(False)
         self.sel = selectors.DefaultSelector()
-        self.sel.register(self.sock, selectors.EVENT_READ, self.accept)
-        self._socket_read, self._sock_write = socket.socketpair()
-        self.sel.register(self._socket_read, selectors.EVENT_READ)
+        self.sel.register(self._sockets["main"], selectors.EVENT_READ, self.accept)
+        self._sockets["read"], self._sockets["write"] = socket.socketpair()
+        self.sel.register(self._sockets["read"], selectors.EVENT_READ)
         return super().enter()
 
     def break_select(self):
-        self._sock_write.send(b"\x00")
+        self._sockets["write"].send(b"\x00")
 
     def mainloop_quit(self):
         super().mainloop_quit()
-        self.sock.shutdown(socket.SHUT_RDWR)
+        self._sockets["main"].shutdown(socket.SHUT_RDWR)
 
     def exit(self):
         super().exit()
-        for sock in [self.sock, self._socket_read, self._sock_write]:
+        while self._sockets:
+            name, sock = self._sockets.popitem()
             sock.close()
 
     def mainloop_hook(self):
         super().mainloop_hook()
         events = self.sel.select(5)
         for key, mask in events:
-            if key.fileobj is self._socket_read: # called break_select()
-                self._socket_read.recv(1)
+            if key.fileobj is self._sockets["read"]: # called break_select()
+                self._sockets["read"].recv(1)
                 break
             callback = key.data
             callback(key.fileobj, mask)
