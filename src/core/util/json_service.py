@@ -41,12 +41,18 @@ class Base(AbstractMainloopManager):
 
     def connect(self): pass
 
+    def disconnect(self):
+        if sock := self._sockets.pop("main", None):
+            self.sel.unregister(sock)
+            sock.shutdown(socket.SHUT_RDWR)
+            sock.close()
+
     def trigger_mainloop(self):
         self._sockets["write"].send(b"\x00")
 
     def mainloop_quit(self):
         super().mainloop_quit()
-        self._sockets["main"].shutdown(socket.SHUT_RDWR)
+        self.trigger_mainloop()
 
     def mainloop_hook(self):
         super().mainloop_hook()
