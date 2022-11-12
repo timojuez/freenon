@@ -17,8 +17,8 @@ class Base(AbstractMainloopManager):
     Call enter() after init.
     """
     
-    def __init__(self, host="127.0.0.1", port=PORT, verbose=0):
-        super().__init__()
+    def __init__(self, host="127.0.0.1", port=PORT, *args, verbose=0, **xargs):
+        super().__init__(*args, **xargs)
         self.address = (host, port)
         self._sockets = {}
         self._verbose = verbose
