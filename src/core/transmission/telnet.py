@@ -93,15 +93,27 @@ class TelnetClient(AbstractClient):
             except ConnectionError: return self._stoploop.wait(3)
 
 
-class _TelnetServer(Service):
+class TelnetServer(Service, AbstractServer):
+    init_args_help = ("//LISTEN_IP", "LISTEN_PORT")
     EVENTS = selectors.EVENT_READ | selectors.EVENT_WRITE
     
-    def __init__(self, listen_host, listen_port, *args, linebreak="\r", verbose=0, **xargs):
-        super().__init__(host=listen_host, port=listen_port, *args, **xargs, verbose=1)
+    def __init__(self, listen_host="127.0.0.1", listen_port=0, *args, linebreak="\r", verbose=1, **xargs):
+        if listen_host.startswith("//"): listen_host = listen_host[2:]
+        super().__init__(host=listen_host, port=listen_port, *args, **xargs, verbose=verbose)
         self._send = {}
         self._break = linebreak
         if self.verbose >= 1:
             print(f"[{self.__class__.__name__}] Operating on {self.uri}", file=sys.stderr)
+
+    def new_attached_client(self, *args, **xargs):
+        client = super().new_attached_client(None, *args, **xargs)
+        def on_enter():
+            client._update_vars(self.host, self.port)
+            if client.connected:
+                client.disconnect()
+                client.connect()
+        self.bind(enter=on_enter)
+        return client
 
     def connection(self, conn, mask):
         if conn not in self._send: self._send[conn] = b""
@@ -128,24 +140,6 @@ class _TelnetServer(Service):
         encoded = ("%s%s"%(data, self._break)).encode("ascii")
         # send to all connected listeners
         for conn in self._send: self._send[conn] += encoded
-
-
-class TelnetServer(_TelnetServer, AbstractServer):
-    init_args_help = ("//LISTEN_IP", "LISTEN_PORT")
-    
-    def __init__(self, listen_host="127.0.0.1", listen_port=0, *args, verbose=0, **xargs):
-        if listen_host.startswith("//"): listen_host = listen_host[2:]
-        super().__init__(listen_host, int(listen_port), *args, verbose=max(0, verbose-1), **xargs)
-
-    def new_attached_client(self, *args, **xargs):
-        client = super().new_attached_client(None, *args, **xargs)
-        def on_enter():
-            client._update_vars(self.host, self.port)
-            if client.connected:
-                client.disconnect()
-                client.connect()
-        self.bind(enter=on_enter)
-        return client
 
 
 class TelnetScheme(AbstractScheme):
