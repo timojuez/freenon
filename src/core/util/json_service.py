@@ -12,9 +12,9 @@ from . import AbstractMainloopManager
 PORT=654321
 
 
-class Server(AbstractMainloopManager):
+class _Abstract(AbstractMainloopManager):
     """
-    A service communicating with Json objects. Call enter() after init.
+    Call enter() after init.
     """
     EVENTS = selectors.EVENT_READ
     
@@ -28,15 +28,8 @@ class Server(AbstractMainloopManager):
     port = property(lambda self: self._sockets["main"].getsockname()[1])
 
     def enter(self):
-        self._sockets["main"] = socket.socket()
-        self._sockets["main"].setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self._sockets["main"].bind(self.address)
-        if self._verbose > 0:
-            print(f"[{type(self).__name__}] Listening on {self.host}:{self.port}", file=sys.stderr)
-        self._sockets["main"].listen(100)
         self._sockets["main"].setblocking(False)
         self.sel = selectors.DefaultSelector()
-        self.sel.register(self._sockets["main"], selectors.EVENT_READ, self.accept)
         self._sockets["read"], self._sockets["write"] = socket.socketpair()
         self.sel.register(self._sockets["read"], selectors.EVENT_READ)
         self._send_queue = {}
@@ -71,15 +64,6 @@ class Server(AbstractMainloopManager):
                 try: conn.sendall(msg)
                 except OSError: pass
 
-    def accept(self, sock, mask):
-        try: conn, addr = sock.accept()
-        except OSError as e:
-            if self._verbose > 1: print(repr(e), file=sys.stderr)
-            return
-        conn.setblocking(False)
-        self._send_queue[conn] = Queue()
-        self.sel.register(conn, self.EVENTS, self.connection)
-        
     def connection(self, conn, mask):
         if mask & selectors.EVENT_READ:
             try: data = conn.recv(1000)
@@ -101,6 +85,36 @@ class Server(AbstractMainloopManager):
             for conn, queue in self._send_queue.items():
                 queue.put(msg)
         self.trigger_mainloop()
+
+
+class Server(_Abstract):
+
+    def enter(self):
+        self._sockets["main"] = socket.socket()
+        self._sockets["main"].setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self._sockets["main"].bind(self.address)
+        if self._verbose > 0:
+            print(f"[{type(self).__name__}] Listening on {self.host}:{self.port}", file=sys.stderr)
+        self._sockets["main"].listen(100)
+        try: return super().enter()
+        finally: self.sel.register(self._sockets["main"], selectors.EVENT_READ, self.accept)
+
+    def accept(self, sock, mask):
+        try: conn, addr = sock.accept()
+        except OSError as e:
+            if self._verbose > 1: print(repr(e), file=sys.stderr)
+            return
+        conn.setblocking(False)
+        self._send_queue[conn] = Queue()
+        self.sel.register(conn, self.EVENTS, self.connection)
+
+
+class Client(_Abstract):
+
+    def enter(self):
+        self._sockets["main"] = socket.create_connection((host, port), timeout)
+        try: return super().enter()
+        finally: self.sel.register(self._sockets["main"], selectors.EVENT_READ, self.connection)
 
 
 class JsonService(Server):
