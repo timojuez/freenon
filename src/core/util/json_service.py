@@ -29,6 +29,8 @@ class Base(AbstractMainloopManager):
     def enter(self):
         self._sockets["read"], self._sockets["write"] = socket.socketpair()
         self._send_queue = {}
+        self.sel = selectors.DefaultSelector()
+        self.sel.register(self._sockets["read"], selectors.EVENT_READ)
         return super().enter()
 
     def exit(self):
@@ -37,9 +39,7 @@ class Base(AbstractMainloopManager):
             name, sock = self._sockets.popitem()
             sock.close()
 
-    def connect(self):
-        self.sel = selectors.DefaultSelector()
-        self.sel.register(self._sockets["read"], selectors.EVENT_READ)
+    def connect(self): pass
 
     def trigger_mainloop(self):
         self._sockets["write"].send(b"\x00")
