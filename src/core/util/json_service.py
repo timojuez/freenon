@@ -114,9 +114,9 @@ class Server(Base):
 
 class Client(Base):
 
-    def connect(self):
+    def connect(self, timeout=None):
         super().connect()
-        self._sockets["main"] = socket.create_connection(self.address, timeout)
+        self._sockets["main"] = socket.create_connection(self.address, timeout=timeout)
         self._sockets["main"].setblocking(False)
         self._send_queue[self._sockets["main"]] = Queue()
         self.sel.register(self._sockets["main"], selectors.EVENT_READ, self.connection)
