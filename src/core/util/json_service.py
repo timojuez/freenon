@@ -65,16 +65,15 @@ class _Abstract(AbstractMainloopManager):
                 except OSError: pass
 
     def connection(self, conn, mask):
-        if mask & selectors.EVENT_READ:
-            try: data = conn.recv(1000)
-            except ConnectionError as e:
-                print(e, file=sys.stderr)
-                data = None
-            if data: self.read(data)
-            else:
-                self.sel.unregister(conn)
-                conn.close()
-                del self._send_queue[conn]
+        try: data = conn.recv(1000)
+        except ConnectionError as e:
+            print(e, file=sys.stderr)
+            data = None
+        if data: self.read(data)
+        else:
+            self.sel.unregister(conn)
+            conn.close()
+            del self._send_queue[conn]
 
     def read(self, data): raise NotImplementedError()
 
