@@ -12,7 +12,7 @@ from . import AbstractMainloopManager
 PORT=654321
 
 
-class Service(AbstractMainloopManager):
+class Server(AbstractMainloopManager):
     """
     A service communicating with Json objects. Call enter() after init.
     """
@@ -103,7 +103,7 @@ class Service(AbstractMainloopManager):
         self.trigger_mainloop()
 
 
-class JsonService(Service):
+class JsonService(Server):
 
     def read(self, data):
         try:

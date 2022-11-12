@@ -2,7 +2,7 @@ import time, socket, time, selectors, traceback, sys
 from telnetlib import Telnet, TELNET_PORT
 from threading import Lock, Thread, Event
 from contextlib import suppress
-from ..util.json_service import Service
+from ..util.json_service import Server
 from .abstract import AbstractScheme, AbstractClient, AbstractServer
 
 
@@ -93,7 +93,7 @@ class TelnetClient(AbstractClient):
             except ConnectionError: return self._stoploop.wait(3)
 
 
-class TelnetServer(Service, AbstractServer):
+class TelnetServer(Server, AbstractServer):
     init_args_help = ("//LISTEN_IP", "LISTEN_PORT")
     
     def __init__(self, listen_host="127.0.0.1", listen_port=0, *args, linebreak="\r", verbose=1, **xargs):
