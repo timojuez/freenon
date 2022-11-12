@@ -12,7 +12,7 @@ from . import AbstractMainloopManager
 PORT=654321
 
 
-class _Abstract(AbstractMainloopManager):
+class Base(AbstractMainloopManager):
     """
     Call enter() after init.
     """
@@ -86,7 +86,7 @@ class _Abstract(AbstractMainloopManager):
         self.trigger_mainloop()
 
 
-class Server(_Abstract):
+class Server(Base):
 
     def enter(self):
         try: return super().enter()
@@ -112,7 +112,7 @@ class Server(_Abstract):
         self.sel.register(conn, selectors.EVENT_READ, self.connection)
 
 
-class Client(_Abstract):
+class Client(Base):
 
     def connect(self):
         super().connect()
