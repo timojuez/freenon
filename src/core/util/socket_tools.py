@@ -180,5 +180,5 @@ class RemoteControlService(JsonService):
 def send(obj, port=PORT):
     sock = socket.socket()
     sock.connect_ex(("localhost", port))
-    sock.send(json.dumps(obj).encode())
+    sock.sendall(json.dumps(obj).encode())
 
