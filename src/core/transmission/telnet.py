@@ -98,7 +98,7 @@ class TelnetServer(Server, AbstractServer):
     
     def __init__(self, listen_host="127.0.0.1", listen_port=0, *args, linebreak="\r", verbose=1, **xargs):
         if listen_host.startswith("//"): listen_host = listen_host[2:]
-        super().__init__(host=listen_host, port=listen_port, *args, **xargs, verbose=verbose)
+        super().__init__(host=listen_host, port=int(listen_port), *args, **xargs, verbose=verbose)
         self._break = linebreak
         if self.verbose >= 1:
             print(f"[{self.__class__.__name__}] Operating on {self.uri}", file=sys.stderr)
