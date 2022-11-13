@@ -20,7 +20,6 @@ class FunctionCall(object):
         self._features = features
         self._args = args
         self._kwargs = kwargs
-        self._missing_features = features
         self._timeout = datetime.now()+timedelta(seconds=timeout) if timeout != None else None
         self.postpone()
         if not self._try_call():
@@ -29,10 +28,11 @@ class FunctionCall(object):
 
     def __repr__(self): return "<pending%s>"%self._func
     
+    _missing_features = property(lambda self: list(filter(lambda f:not f.isset(), self._features)))
+
     def _try_call(self):
         with self._lock:
             if not self.active: return False
-            self._missing_features = list(filter(lambda f:not f.isset(), self._missing_features))
             if not self._missing_features:
                 try: self._func(*self._features, *self._args, **self._kwargs)
                 except ConnectionError: pass
@@ -55,7 +55,7 @@ class FunctionCall(object):
             self.cancel()
     
     def on_feature_set(self, feature):
-        if feature in self._missing_features and self._try_call():
+        if feature in self._features and self._try_call():
             if self._target.verbose > 5: print("[%s] called pending function %s"
                 %(self.__class__.__name__, self._func.__name__), file=sys.stderr)
 
