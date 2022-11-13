@@ -16,7 +16,7 @@ class Base(AbstractMainloopManager):
     """
     Call enter() after init.
     """
-    
+
     def __init__(self, host="127.0.0.1", port=PORT, *args, verbose=0, **xargs):
         self.address = (host, port)
         self._sockets = {}
@@ -146,8 +146,8 @@ class JsonService(Server):
 
 
 class RemoteControlService(JsonService):
-    """ 
-    Opens a service on a port and executes calls on @obj when received 
+    """
+    Opens a service on a port and executes calls on @obj when received
     message schema: {"func": property_of_obj, "kwargs": {}}
     """
 
@@ -155,7 +155,7 @@ class RemoteControlService(JsonService):
         self._obj = obj
         self._func_whitelist = func_whitelist
         super().__init__(*args,**xargs)
-        
+
     def on_read(self, data):
         try:
             if self._func_whitelist: assert(data["func"] in self._func_whitelist)
@@ -165,9 +165,9 @@ class RemoteControlService(JsonService):
             kwargs = data["kwargs"]
         except:
             return print("[%s] invalid message."%self.__class__.__name__, file=sys.stderr)
-        Thread(name=self._obj.__class__.__name__, target=func,kwargs=kwargs, 
+        Thread(name=self._obj.__class__.__name__, target=func,kwargs=kwargs,
             daemon=True).start()
-            
+
 
 def send(obj, port=PORT):
     sock = socket.socket()
