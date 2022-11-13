@@ -1,101 +1,83 @@
-import time, socket, time, selectors, traceback, sys
-from telnetlib import Telnet, TELNET_PORT
-from threading import Lock, Thread, Event
+import socket, traceback, sys
+from threading import Lock
 from contextlib import suppress
-from ..util.socket_tools import Server
+from datetime import datetime, timedelta
+from ..util import socket_tools
 from .abstract import AbstractScheme, AbstractClient, AbstractServer
 
 
-class TelnetClient(AbstractClient):
+PORT = 23
+
+
+class _IO(socket_tools.Base):
+    _break = "\r"
+
+    def __init__(self, *args, **xargs):
+        super().__init__(*args, **xargs)
+        self.verbose = self._verbose
+
+    def read(self, data, conn):
+        try: decoded = data.strip().decode()
+        except: return print(traceback.format_exc())
+        for data in decoded.replace("\n", self._break).split(self._break):
+            self.on_receive_raw_data(data)
+
+    def send(self, data):
+        super().send(data)
+        self.write(self._encode(data))
+
+    def _encode(self, data):
+        return ("%s%s"%(data, self._break)).encode("ascii")
+
+
+class TelnetClient(_IO, socket_tools.Client, AbstractClient):
     """
     This class connects to the server via LAN and executes commands
     @host is the server's hostname or IP.
     """
     init_args_help = ("//SERVER_IP", "SERVER_PORT")
-    host = None
-    port = None
     _pulse = "" # this is being sent regularly to keep connection
-    _telnet = None
-    _send_lock = Lock
-    _pulse_stop = Event
-    _connect_lock = Lock
-    
-    def __init__(self, host, port=TELNET_PORT, *args, **xargs):
-        super().__init__(*args, **xargs)
-        self._send_lock = self._send_lock()
-        self._connect_lock = self._connect_lock()
-        self._pulse_stop = self._pulse_stop()
-        if host: self._update_vars(host, port)
+    _next_pulse = datetime.fromtimestamp(0)
 
-    def _update_vars(self, host, port):
-        if host.startswith("//"): host = host[2:]
-        self.host = host
-        self.port = port
-        self.update_uri(f"//{host}", port)
-    
+    def __init__(self, host, port=PORT, *args, **xargs):
+        if host and host.startswith("//"): host = host[2:]
+        super().__init__(host, port, *args, **xargs)
+        self._connect_lock = Lock()
+
+    def update_uri(self):
+        super().update_uri(f"//{self.host}", self.port)
+
     def send(self, cmd):
+        if not self.connected: raise BrokenPipeError(f"{self} not connected to {self.uri}.")
         super().send(cmd)
-        try:
-            with self._send_lock:
-                assert(self.connected and self._telnet.sock)
-                self._telnet.write(("%s\r"%cmd).encode("ascii"))
-                time.sleep(.01)
-        except (OSError, EOFError, AssertionError, AttributeError) as e:
-            self.on_disconnected()
-            raise BrokenPipeError(e)
-        
-    def read(self, timeout=None):
-        try:
-            assert(self.connected and self._telnet.sock)
-            return self._telnet.read_until(b"\r",timeout=timeout).strip().decode()
-        except (socket.timeout, UnicodeDecodeError): return None
-        except (OSError, EOFError, AssertionError, AttributeError) as e:
-            self.on_disconnected()
-            raise BrokenPipeError(e)
-    
+
     def connect(self):
-        super().connect()
         with self._connect_lock:
             if self.connected: return
-            try: self._telnet = Telnet(self.host,self.port,timeout=2)
+            try: super().connect(timeout=2)
             except (ConnectionError, socket.timeout, socket.gaierror, socket.herror, OSError) as e:
                 raise ConnectionError(e)
             else: self.on_connect()
 
-    def disconnect(self):
-        super().disconnect()
-        with suppress(AttributeError, OSError):
-            self._telnet.sock.shutdown(socket.SHUT_WR) # break read()
-            self._telnet.close()
-    
-    def on_connect(self):
-        super().on_connect()
-        def func():
-            while not self._pulse_stop.wait(10):
+    def disconnect(self, *args, **xargs):
+        super().disconnect(*args, **xargs)
+        self.on_disconnected()
+
+    def mainloop_hook(self):
+        if self.connected:
+            super().mainloop_hook()
+            if self._pulse is not None and self._next_pulse < datetime.now():
+                self._next_pulse = datetime.now() + timedelta(seconds=30)
                 try: self.send(self._pulse)
                 except ConnectionError: pass
-        self._pulse_stop.clear()
-        if self._pulse is not None: Thread(target=func, daemon=True, name="pulse").start()
-        
-    def on_disconnected(self):
-        super().on_disconnected()
-        self._pulse_stop.set()
-        
-    def mainloop_hook(self):
-        super().mainloop_hook()
-        if self.connected:
-            try: data = self.read(5)
-            except ConnectionError: pass
-            else:
-                if data: self.on_receive_raw_data(data)
         else:
             try: self.connect()
             except ConnectionError: return self._stoploop.wait(3)
 
 
-class TelnetServer(Server, AbstractServer):
+class TelnetServer(_IO, socket_tools.Server, AbstractServer):
     init_args_help = ("//LISTEN_IP", "LISTEN_PORT")
-    
+
     def __init__(self, listen_host="127.0.0.1", listen_port=0, *args, linebreak="\r", verbose=1, **xargs):
         if listen_host.startswith("//"): listen_host = listen_host[2:]
         super().__init__(host=listen_host, port=int(listen_port), *args, **xargs, verbose=verbose)
@@ -106,25 +88,13 @@ class TelnetServer(Server, AbstractServer):
     def new_attached_client(self, *args, **xargs):
         client = super().new_attached_client(None, *args, **xargs)
         def on_enter():
-            client._update_vars(self.host, self.port)
+            client.address = self._sockets["main"].getsockname()
             if client.connected:
                 client.disconnect()
                 client.connect()
+            client.update_uri()
         self.bind(enter=on_enter)
         return client
-
-    def read(self, data, conn):
-        try: decoded = data.strip().decode()
-        except: return print(traceback.format_exc())
-        for data in decoded.replace("\n","\r").split("\r"):
-            if self.verbose >= 1: print("%s $ %s"%(self.uri, data))
-            try: self.on_receive_raw_data(data)
-            except Exception as e: print(traceback.format_exc())
-
-    def send(self, data):
-        if self.verbose >= 1: print(data)
-        encoded = ("%s%s"%(data, self._break)).encode("ascii")
-        self.write(encoded)
 
 
 class TelnetScheme(AbstractScheme):
