@@ -46,11 +46,13 @@ class Base(AbstractMainloopManager):
 
     def connect(self): pass
 
-    def disconnect(self):
-        if sock := self._sockets.pop("main", None):
+    def disconnect(self, conn=None):
+        if sock := conn or self._sockets.pop("main", None):
             self.sel.unregister(sock)
             sock.shutdown(socket.SHUT_RDWR)
             sock.close()
+            try: del self._send_queue[sock]
+            except KeyError: pass
 
     def trigger_mainloop(self):
         if self._triggering.acquire(blocking=False):
@@ -76,18 +78,19 @@ class Base(AbstractMainloopManager):
                 except Empty: break
                 else:
                     try: conn.sendall(msg)
-                    except OSError: pass
+                    except OSError:
+                        self.disconnect(conn)
+                        break
 
     def connection(self, conn, mask):
         try: data = conn.recv(1000)
         except ConnectionError as e:
             print(e, file=sys.stderr)
             data = None
-        if data: self.read(data, conn)
+        if data:
+            self.read(data, conn)
         else:
-            self.sel.unregister(conn)
-            conn.close()
-            del self._send_queue[conn]
+            self.disconnect(conn)
 
     def read(self, data, conn): raise NotImplementedError()
 
