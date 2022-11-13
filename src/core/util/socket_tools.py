@@ -73,7 +73,7 @@ class Base(AbstractMainloopManager):
                 break
             callback = key.data
             callback(key.fileobj, mask)
-        for conn, queue in self._send_queue.items():
+        for conn, queue in self._send_queue.copy().items():
             for _ in range(50):
                 try: msg = queue.get(block=False)
                 except Empty: break
@@ -99,7 +99,7 @@ class Base(AbstractMainloopManager):
         if conn:
             self._send_queue[conn].put(msg)
         else:
-            for conn, queue in self._send_queue.items():
+            for conn, queue in self._send_queue.copy().items():
                 queue.put(msg)
         self.trigger_mainloop()
 
