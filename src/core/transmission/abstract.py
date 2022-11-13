@@ -73,7 +73,6 @@ class AbstractTarget(Bindable, AbstractMainloopManager):
     def send(self, data): raise NotImplementedError()
 
     def on_receive_raw_data(self, data):
-        if self.verbose > 4: print(data, file=sys.stderr)
         consumed = [f.consume(data) for f_id,f in self.features.items() if f.matches(data)]
         if not consumed: self.features.fallback.consume(data)
 
@@ -130,9 +129,8 @@ class AbstractServer(ServerType, AbstractTarget):
 
     def on_receive_feature_value(self, f, value): f.set_on_server(value)
 
-    def send(self, data): pass
-
     def on_receive_raw_data(self, data):
+        if self.verbose >= 1: print(f"{self.uri} > ${repr(data)}")
         called_features = [f for f_id, f in self.features.items() if f.call == data]
         if called_features:
             # data is a request
@@ -142,6 +140,9 @@ class AbstractServer(ServerType, AbstractTarget):
         else:
             # data is a command
             super().on_receive_raw_data(data)
+
+    def send(self, data):
+        if self.verbose >= 1: print(data)
 
 
 class GroupedSet:
@@ -265,8 +266,12 @@ class _AbstractClient(ClientType, AbstractTarget):
 
     __call__ = lambda self,*args,**xargs: self.query(*args,**xargs)
         
-    def send(self, cmd):
-        if self.verbose > 4: print(f"{self.uri} > ${repr(cmd)}", file=sys.stderr)
+    def on_receive_raw_data(self, data):
+        if self.verbose > 4: print(data, file=sys.stderr)
+        super().on_receive_raw_data(data)
+
+    def send(self, data):
+        if self.verbose > 4: print(f"{self.uri} > ${repr(data)}", file=sys.stderr)
 
     @log_call
     def on_connect(self):
