@@ -49,7 +49,8 @@ class Base(AbstractMainloopManager):
     def disconnect(self, conn=None):
         if sock := conn or self._sockets.pop("main", None):
             self.sel.unregister(sock)
-            sock.shutdown(socket.SHUT_RDWR)
+            try: sock.shutdown(socket.SHUT_RDWR)
+            except OSError: pass
             sock.close()
             try: del self._send_queue[sock]
             except KeyError: pass
@@ -78,7 +79,7 @@ class Base(AbstractMainloopManager):
                 except Empty: break
                 else:
                     try: conn.sendall(msg)
-                    except OSError:
+                    except (OSError, ConnectionError):
                         self.disconnect(conn)
                         break
 
