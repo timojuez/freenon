@@ -4,7 +4,7 @@ The function "send" sends dicts.
 """
 
 import selectors, socket, json, sys
-from threading import Thread
+from threading import Thread, Lock
 from queue import Queue, Empty
 from . import AbstractMainloopManager
 
@@ -20,6 +20,7 @@ class Base(AbstractMainloopManager):
     def __init__(self, host="127.0.0.1", port=PORT, *args, verbose=0, **xargs):
         self.address = (host, port)
         self._sockets = {}
+        self._triggering = Lock()
         self._verbose = verbose
         super().__init__(*args, **xargs)
 
@@ -52,7 +53,8 @@ class Base(AbstractMainloopManager):
             sock.close()
 
     def trigger_mainloop(self):
-        self._sockets["write"].send(b"\x00")
+        if self._triggering.acquire(blocking=False):
+            self._sockets["write"].send(b"\x00")
 
     def mainloop_quit(self):
         super().mainloop_quit()
@@ -64,15 +66,17 @@ class Base(AbstractMainloopManager):
         for key, mask in events:
             if key.fileobj is self._sockets["read"]: # called trigger_mainloop()
                 self._sockets["read"].recv(1)
+                self._triggering.release()
                 break
             callback = key.data
             callback(key.fileobj, mask)
         for conn, queue in self._send_queue.items():
-            try: msg = queue.get(block=False)
-            except Empty: pass
-            else:
-                try: conn.sendall(msg)
-                except OSError: pass
+            for _ in range(50):
+                try: msg = queue.get(block=False)
+                except Empty: break
+                else:
+                    try: conn.sendall(msg)
+                    except OSError: pass
 
     def connection(self, conn, mask):
         try: data = conn.recv(1000)
