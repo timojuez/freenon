@@ -63,6 +63,10 @@ class AbstractTarget(Bindable, AbstractMainloopManager):
                 %(self.__class__.__name__, func.__name__, e), file=sys.stderr)
         else: return features.FunctionCall(self, func, args, kwargs, features_)
 
+    def mainloop_hook(self):
+        super().mainloop_hook()
+        for p in self._pending: p.check_expiration()
+
     @log_call
     def on_feature_change(self, f_id, value):
         """ attribute on server has changed """
@@ -211,10 +215,6 @@ class _FeaturesMixin:
         self._pending.clear()
         self._poll_timeout.clear()
         for f in self.features.values(): f.unset()
-    
-    def mainloop_hook(self):
-        super().mainloop_hook()
-        for p in self._pending: p.check_expiration()
 
     def poll_feature(self, f, force=False):
         """ poll feature value if not polled in same time frame or force is True """
