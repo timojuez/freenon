@@ -22,13 +22,12 @@ class AbstractTarget(Bindable, AbstractMainloopManager):
     Scheme = None
     features = features.Features()
     feature_categories = property(lambda self: self.Scheme.feature_categories)
-    _pending = list
 
     def __init__(self, *args, verbose=0, **xargs):
         self.verbose = verbose
         self.update_uri()
         self.features = self.features.__class__()
-        self._pending = self._pending()
+        self._pending = []
         # apply @features to self
         for F in self.Scheme.features.values(): F(self)
         super().__init__(*args, **xargs)
