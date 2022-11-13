@@ -214,11 +214,13 @@ class AsyncFeature(FeatureInterface, Bindable, metaclass=_MetaFeature):
     
     def resend(self): return AsyncFeature.remote_set(self, self._val, force=True)
     
-    def consume(self, cmd):
-        """ unserialize and apply @cmd to this object """
+    def consume(self, data):
+        """ unserialize and apply @data to this object """
         self.__class__._block_on_remote_set = None # for power.consume("PWON")
-        try: d = self.unserialize(cmd)
-        except: print(traceback.format_exc(), file=sys.stderr)
+        try: d = self.unserialize(data)
+        except:
+            print(f"Error on {self.id}.consume({repr(data)}):", file=sys.stderr)
+            print(traceback.format_exc(), file=sys.stderr)
         else: return self.target.on_receive_feature_value(self, d)
         
     def set(self, value):
