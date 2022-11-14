@@ -16,6 +16,9 @@ class _IO(socket_tools.Base):
         super().__init__(*args, **xargs)
         self.verbose = self._verbose
 
+    def update_uri(self):
+        super().update_uri(f"//{self.host}", self.port)
+
     def read(self, data, conn):
         try: decoded = data.strip().decode()
         except: return print(traceback.format_exc())
@@ -47,9 +50,6 @@ class TelnetClient(_IO, socket_tools.Client, AbstractClient):
         if host and host.startswith("//"): host = host[2:]
         super().__init__(host, port, *args, **xargs)
         self._connect_lock = Lock()
-
-    def update_uri(self):
-        super().update_uri(f"//{self.host}", self.port)
 
     def send(self, cmd):
         if not self.connected: raise BrokenPipeError(f"{self} not connected to {self.uri}.")
