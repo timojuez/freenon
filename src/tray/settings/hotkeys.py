@@ -28,10 +28,12 @@ class HotkeysMixin:
         def on_click(x, y, button, pressed):
             Gdk.Seat.ungrab(seat)
             mouse_listener.stop()
-            self._set_mouse_button_label(widget, button.value)
-            config["hotkeys"]["mouse"][0]["button"] = button.value
-            config.save()
-            self.app_manager.main_app.input_listener.refresh_mouse()
+            if button.value == 1: print("Button1 is not allowed.")
+            else:
+                config["hotkeys"]["mouse"][0]["button"] = button.value
+                config.save()
+                self.app_manager.main_app.input_listener.refresh_mouse()
+            self._set_mouse_button_label(widget, config["hotkeys"]["mouse"][0]["button"])
         widget.set_label("Press mouse key ...")
         widget.set_sensitive(False)
         seat = Gdk.Display.get_default_seat(self.window.get_display())
