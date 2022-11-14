@@ -86,8 +86,6 @@ class TelnetServer(_IO, socket_tools.Server, AbstractServer):
         if listen_host.startswith("//"): listen_host = listen_host[2:]
         super().__init__(host=listen_host, port=int(listen_port), *args, **xargs, verbose=verbose)
         self._break = linebreak
-        if self.verbose >= 1:
-            print(f"[{self.__class__.__name__}] Operating on {self.uri}", file=sys.stderr)
 
     def new_attached_client(self, *args, **xargs):
         client = super().new_attached_client(None, *args, **xargs)
@@ -99,6 +97,12 @@ class TelnetServer(_IO, socket_tools.Server, AbstractServer):
             client.update_uri()
         self.bind(enter=on_enter)
         return client
+
+    def connect(self):
+        super().connect()
+        self.update_uri()
+        if self.verbose >= 1:
+            print(f"[{self.__class__.__name__}] Operating on {self.uri}", file=sys.stderr)
 
 
 class TelnetScheme(AbstractScheme):
