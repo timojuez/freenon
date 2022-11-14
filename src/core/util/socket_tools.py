@@ -116,7 +116,7 @@ class Server(Base):
         self._sockets["main"].setblocking(False)
         try: self._sockets["main"].setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         except: pass
-        if self._verbose > 0:
+        if self._verbose >= 2:
             print(f"[{type(self).__name__}] Listening on {self.host}:{self.port}", file=sys.stderr)
         self.sel.register(self._sockets["main"], selectors.EVENT_READ, self.accept)
 
@@ -139,6 +139,11 @@ class Client(Base):
         self._send_queue.clear()
         self._send_queue[self._sockets["main"]] = Queue()
         self.sel.register(self._sockets["main"], selectors.EVENT_READ, self.connection)
+
+    #def mainloop_hook(self):
+    #    if self.pulse is not None:
+    #        for q in self._send_queue.copy().values(): q.put(self.pulse)
+    #    super().mainloop_hook()
 
 
 class JsonService(Server):
