@@ -139,7 +139,7 @@ class AbstractServer(ServerType, AbstractTarget):
     def on_receive_feature_value(self, f, value): f.set_on_server(value)
 
     def on_receive_raw_data(self, data):
-        if self.verbose >= 1: print(f"{self.uri} > ${repr(data)}")
+        if self.verbose >= 2: print(f"{self.uri} > ${repr(data)}")
         called_features = [f for f_id, f in self.features.items() if f.call == data]
         if called_features:
             # data is a request
@@ -151,7 +151,7 @@ class AbstractServer(ServerType, AbstractTarget):
             super().on_receive_raw_data(data)
 
     def send(self, data):
-        if self.verbose >= 1: print(data)
+        if self.verbose >= 2: print(data)
 
 
 class GroupedSet:
