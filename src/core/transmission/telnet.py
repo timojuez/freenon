@@ -29,6 +29,10 @@ class _IO(socket_tools.Base):
     def _encode(self, data):
         return ("%s%s"%(data, self._break)).encode("ascii")
 
+    def schedule(self, *args, **xargs):
+        super().schedule(*args, **xargs)
+        self.trigger_mainloop()
+
 
 class TelnetClient(_IO, socket_tools.Client, AbstractClient):
     """
