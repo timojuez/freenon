@@ -66,6 +66,7 @@ class KeyBinding(TargetApp):
 
     def on_mouse_up(self, x, y):
         self._position_ref = None
+        self._feature_changed.set() # break _feature_changed.wait()
 
     def on_activated_mouse_move(self, x, y):
         f = self.target.features.get(config.gesture_feature)
