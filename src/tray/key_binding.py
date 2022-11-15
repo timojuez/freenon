@@ -51,7 +51,6 @@ class KeyBinding(TargetApp):
     def on_gesture_feature_change(self, f_id, val):
         """ target feature changed """
         if f_id != config.gesture_feature: return
-        #self.set_position_reference(self._y, val)
         self._feature_changed.set()
 
     def set_position_reference(self, y, vol):
@@ -64,11 +63,9 @@ class KeyBinding(TargetApp):
         except KeyError: return
         try: self.set_position_reference(y, f.get())
         except ConnectionError: pass
-        sleep()
 
     def on_mouse_up(self, x, y):
         self._position_ref = None
-        #Thread(target=self.poweron, args=(True,), name="poweron", daemon=True).start()
 
     def on_activated_mouse_move(self, x, y):
         f = self.target.features.get(config.gesture_feature)
