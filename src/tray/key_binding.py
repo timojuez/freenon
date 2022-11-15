@@ -108,8 +108,8 @@ class KeyBinding(TargetApp):
         if new_value is not None:
             new_value = max(min(new_value, f.max), f.min)
             if new_value != f.get():
-                f.remote_set(new_value)
                 self._feature_changed.clear()
+                f.remote_set(new_value)
                 sleep()
                 self._feature_changed.wait(.2) # wait for on_feature_change
 
