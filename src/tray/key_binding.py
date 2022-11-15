@@ -71,8 +71,9 @@ class KeyBinding(TargetApp):
         #Thread(target=self.poweron, args=(True,), name="poweron", daemon=True).start()
 
     def on_activated_mouse_move(self, x, y):
-        def func(f):
-            if self._position_ref is not None:
+        f = self.target.features.get(config.gesture_feature)
+        if f and self._position_ref is not None:
+            try:
                 new_value = self._position_ref-int((y-self._y_ref)*config["hotkeys"]["mouse"][0]["sensitivity"])
                 max_ = min(f.max, f.get()+Decimal(config["hotkeys"]["mouse"][0]["max_step"]))
                 min_ = f.min
@@ -81,7 +82,7 @@ class KeyBinding(TargetApp):
                     new_value = max(min_, min(max_, new_value))
                     self.set_position_reference(y, new_value)
                 self.set_feature_value(new_value)
-        self.target.schedule(func, requires=(config.gesture_feature,))
+            except ConnectionError: pass
 
     def set_feature_value(self, value):
         with self._set_feature_lock:
@@ -98,7 +99,9 @@ class KeyBinding(TargetApp):
     def mouse_gesture_thread(self):
         while True:
             self._feature_step.wait()
-            self.target.schedule(self._update_feature_value, requires=(config.gesture_feature,))
+            if f := self.target.features.get(config.gesture_feature):
+                try: self._update_feature_value(f)
+                except ConnectionError: pass
 
     def _update_feature_value(self, f):
         with self._set_feature_lock:
