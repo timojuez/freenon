@@ -107,14 +107,11 @@ class KeyBinding(TargetApp):
         with self._set_feature_lock:
             self._feature_step.clear()
             new_value = self._new_value
-            self._new_value = None
-        if new_value is not None:
-            new_value = max(min(new_value, f.max), f.min)
-            if new_value != f.get():
-                self._feature_changed.clear()
-                f.remote_set(new_value)
-                sleep()
-                self._feature_changed.wait(.2) # wait for on_feature_change
+        if new_value in (None, f.get()): return
+        self._feature_changed.clear()
+        f.remote_set(new_value)
+        sleep()
+        self._feature_changed.wait(.2) # wait for on_feature_change
 
 
 class InputDeviceListener(Bindable, AbstractContextManager):
