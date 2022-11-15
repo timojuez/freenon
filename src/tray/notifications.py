@@ -87,10 +87,12 @@ class NumericNotification(FeatureNotification):
 
     def show(self):
         if self.scale_popup._current_feature == self.f and self.scale_popup.visible: return
+        try: value = self.f.get()
+        except ConnectionError: value = self.f.min
         self._n.update(
             title=self.f.name,
             message=str(self.f),
-            value=self.f.get() if self.f.isset() else self.f.min,
+            value=value,
             min=self.f.min,
             max=self.f.max)
         self._n.show()

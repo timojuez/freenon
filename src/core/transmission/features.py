@@ -149,7 +149,8 @@ class AsyncFeature(FeatureInterface, Bindable, metaclass=_MetaFeature):
         
     name = property(lambda self:self.__class__.__name__)
     
-    def __str__(self): return str(self.get()) if self.isset() else "..."
+    def __str__(self):
+        with self: return str(self.get()) if self.isset() else "..."
 
     def __enter__(self):
         self._lock.__enter__()
