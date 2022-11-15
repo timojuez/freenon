@@ -62,17 +62,17 @@ class TextNotification(FeatureNotification, Notification):
         super().__init__(*args, **xargs)
         self.set_urgency(2)
         self.set_timeout(config["notifications"]["timeout"])
-        super().update("Connecting ...", self.target.uri)
         self.target.preload_features.add("name")
-    
-    def update(self): self.target.schedule(self._update, requires=("name",))
-    
-    def _update(self, name):
-        if not self.f.isset(): return
-        val = {True:"On",False:"Off"}.get(self.f.get(), self.f.get())
-        super().update(f"{self.f.name}: {val}", name.get())
 
-    def show(self): self.target.schedule(lambda _: super(TextNotification, self).show(), requires=("name",))
+    def show(self): self.target.schedule(self._show, requires=("name",))
+
+    def _show(self, name):
+        try:
+            val = {True:"On",False:"Off"}.get(self.f.get(), self.f.get())
+            self.update(f"{self.f.name}: {val}", name.get())
+        except ConnectionError:
+            self.update("Connecting ...", name.get())
+        super().show()
 
 
 class NumericNotification(FeatureNotification):
@@ -82,8 +82,6 @@ class NumericNotification(FeatureNotification):
         self.scale_popup = scale_popup
         self._n = GaugeNotification()
         self._n.set_timeout(config["notifications"]["timeout"])
-
-    def update(self): pass
 
     def show(self):
         if self.scale_popup._current_feature == self.f and self.scale_popup.visible: return
@@ -156,8 +154,8 @@ class NotificationMixin(TrayMixin, KeyBinding, PowerControlMixin, TargetApp):
         super().on_volume_key_press(*args,**xargs)
 
     def show_notification_on_feature_change(self, f_id, value): # bound to target
-        if n := self._notifications.get(f_id): n.update()
-        if self.target.features[f_id]._prev_val is not None: self.show_notification(f_id)
+        f = self.target.features[f_id]
+        if f._prev_val is not None and f.isset(): self.show_notification(f_id)
 
     def on_scroll_up(self, *args, **xargs):
         self.show_notification(config.tray_feature)
