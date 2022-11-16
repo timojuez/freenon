@@ -5,6 +5,7 @@ from ..core import features
 from .common import config, resolve_feature_id, gtk, GladeGtk, APP_NAME, Singleton, TargetApp, NotificationBase, Notification
 from .tray import TrayMixin
 from .key_binding import KeyBinding
+from .power_control import PowerControlMixin
 
 
 class GaugeNotification(GladeGtk, NotificationBase, metaclass=Singleton):
@@ -97,14 +98,22 @@ class NumericNotification(FeatureNotification):
     def hide(self): self._n.hide()
 
 
-class NotificationMixin(TrayMixin, KeyBinding, TargetApp):
+class NotificationMixin(TrayMixin, KeyBinding, PowerControlMixin, TargetApp):
     """ Does the graphical notifications """
 
     def __init__(self, *args, **xargs):
         super().__init__(*args, **xargs)
         self._notifications = {f.id: self.create_notification(f) for f in self.target.features.values()}
         self.target.bind(on_feature_change = self.show_notification_on_feature_change)
-    
+        self._poweron_n2 = Notification(
+            buttons=[
+                ("Cancel", lambda:None),
+                ("OK", self.poweron)],
+            timeout_action=self.poweron)
+        self._poweron_n2.set_timeout(config["power_control"]["poweron_notification_timeout"]*1000)
+        self._power_notifications.append(self._poweron_n2)
+        self.target.preload_features.update(("name", config.power))
+
     def create_notification(self, f):
         if isinstance(f, features.NumericFeature): return NumericNotification(self.scale_popup, f)
         if isinstance(f, features.SelectFeature): return TextNotification(f,
@@ -126,8 +135,19 @@ class NotificationMixin(TrayMixin, KeyBinding, TargetApp):
             if n := self._notifications.get(f_id): n.show()
 
     def on_mouse_down(self,*args,**xargs):
-        self.show_notification(config.gesture_feature)
+        power = self.target.features.get(config.power)
+        try:
+            assert(power and power.get() == False)
+            self._poweron_n2.update("Power on %s"%self.target.features.name.get())
+            self._poweron_n2.show()
+        except (AssertionError, ConnectionError):
+            self.show_notification(config.gesture_feature)
         super().on_mouse_down(*args,**xargs)
+
+    def on_target_power_change(self, power):
+        super().on_target_power_change(power)
+        if power == True:
+            self._poweron_n2.close()
 
     def on_volume_key_press(self,*args,**xargs):
         self.show_notification(config.hotkeys_feature)
