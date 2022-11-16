@@ -11,6 +11,7 @@ PORT = 23
 
 class _IO(socket_tools.Base):
     _break = b"\r"
+    _buf = b""
 
     def __init__(self, *args, **xargs):
         super().__init__(*args, **xargs)
@@ -20,7 +21,9 @@ class _IO(socket_tools.Base):
         super().update_uri(f"//{self.host}", self.port)
 
     def read(self, data, conn):
-        for data_ in data.split(self._break):
+        self._buf += data
+        while self._break in self._buf:
+            data_, self._buf = self._buf.split(self._break, 1)
             try: decoded = data_.decode()
             except: print(traceback.format_exc())
             else: self.on_receive_raw_data(decoded)
