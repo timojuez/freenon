@@ -22,6 +22,7 @@ class KeyBinding(TargetApp):
     _new_value = None
     _position_ref = None
     _y_ref = None
+    _mouse_down_count = 0
 
     def __init__(self, *args, **xargs):
         super().__init__(*args, **xargs)
@@ -59,13 +60,14 @@ class KeyBinding(TargetApp):
 
     def on_mouse_down(self, x, y):
         self._new_value = None
-        try: f = self.target.features[config.gesture_feature]
-        except KeyError: return
-        try: self.set_position_reference(y, f.get())
-        except ConnectionError: pass
+        this = self._mouse_down_count = (self._mouse_down_count+1)%100
+        self._position_ref = None
+        def func(f):
+            if self._mouse_down_count != this: return # check if this is the most recent call
+            self.set_position_reference(y, f.get())
+        self.target.schedule(func, requires=(config.gesture_feature,))
 
     def on_mouse_up(self, x, y):
-        self._position_ref = None
         self._feature_changed.set() # break _feature_changed.wait()
 
     def on_activated_mouse_move(self, x, y):

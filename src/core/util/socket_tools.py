@@ -3,7 +3,7 @@ The JsonService can be used for interprocess communication. It receives dicts.
 The function "send" sends dicts.
 """
 
-import selectors, socket, json, sys
+import selectors, socket, json, sys, traceback
 from threading import Thread, Lock
 from queue import Queue, Empty
 from . import AbstractMainloopManager
@@ -82,6 +82,7 @@ class Base(AbstractMainloopManager):
                     except (OSError, ConnectionError):
                         self.disconnect(conn)
                         break
+                    except: traceback.print_exc()
 
     def connection(self, conn, mask):
         try: data = conn.recv(1000)
