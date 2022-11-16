@@ -74,6 +74,7 @@ class KeyBinding(TargetApp):
         if (f := self.target.features.get(config.gesture_feature)) is None: return
         if self._position_ref is None: return
         new_value = self._position_ref-int((y-self._y_ref)*config["hotkeys"]["mouse"][0]["sensitivity"])
+        if new_value == self._new_value: return
         try: max_ = min(f.max, f.get()+Decimal(config["hotkeys"]["mouse"][0]["max_step"]))
         except ConnectionError: return
         min_ = f.min
@@ -81,6 +82,7 @@ class KeyBinding(TargetApp):
             # mouse has been moved to an illegal point
             new_value = max(min_, min(max_, new_value))
             self.set_position_reference(y, new_value)
+        if new_value == self._new_value: return
         with self._set_feature_lock:
             self._new_value = new_value
             self._feature_step.set()
