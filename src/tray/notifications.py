@@ -69,7 +69,7 @@ class TextNotification(FeatureNotification, Notification):
             val = {True:"On",False:"Off"}.get(self.f.get(), self.f.get())
             self.update(f"{self.f.name}: {val}", self.target.features.name.get())
         except ConnectionError:
-            self.update("Connecting ...", APP_NAME)
+            self.update(f"{self.f.name} not available", APP_NAME)
         super().show()
 
 
@@ -103,6 +103,8 @@ class NotificationMixin(TrayMixin, KeyBinding, PowerControlMixin, TargetApp):
         super().__init__(*args, **xargs)
         self._notifications = {f.id: self.create_notification(f) for f in self.target.features.values()}
         self.target.bind(on_feature_change = self.show_notification_on_feature_change)
+        self.general_n = Notification()
+        self.general_n.set_timeout(config["notifications"]["timeout"])
         self._poweron_n2 = Notification(
             buttons=[
                 ("Cancel", lambda:None),
@@ -129,8 +131,16 @@ class NotificationMixin(TrayMixin, KeyBinding, PowerControlMixin, TargetApp):
         dialog.destroy()
 
     def show_notification(self, f_id):
+        if not f_id: return
         if f_id not in [resolve_feature_id(f_id) for f_id in config["notifications"]["blacklist"]]:
-            if n := self._notifications.get(f_id): n.show()
+            n = self._notifications.get(f_id)
+            if not n:
+                self.general_n.update(f"{f_id} not available for {self.target.Scheme.get_title()}", APP_NAME)
+                self.general_n.show()
+            elif not self.target.connected:
+                self.general_n.update("Connecting ...", APP_NAME)
+                self.general_n.show()
+            else: n.show()
 
     def on_mouse_down(self,*args,**xargs):
         power = self.target.features.get(config.power)
