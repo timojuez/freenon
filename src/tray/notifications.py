@@ -62,16 +62,14 @@ class TextNotification(FeatureNotification, Notification):
         super().__init__(*args, **xargs)
         self.set_urgency(2)
         self.set_timeout(config["notifications"]["timeout"])
-        self.target.preload_features.add("name")
+        self.target.preload_features.add("name", 5)
 
-    def show(self): self.target.schedule(self._show, requires=("name",))
-
-    def _show(self, name):
+    def show(self):
         try:
             val = {True:"On",False:"Off"}.get(self.f.get(), self.f.get())
-            self.update(f"{self.f.name}: {val}", name.get())
+            self.update(f"{self.f.name}: {val}", self.target.features.name.get())
         except ConnectionError:
-            self.update("Connecting ...", name.get())
+            self.update("Connecting ...", APP_NAME)
         super().show()
 
 
