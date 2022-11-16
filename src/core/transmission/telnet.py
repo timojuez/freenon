@@ -10,7 +10,7 @@ PORT = 23
 
 
 class _IO(socket_tools.Base):
-    _break = "\r"
+    _break = b"\r"
 
     def __init__(self, *args, **xargs):
         super().__init__(*args, **xargs)
@@ -20,17 +20,17 @@ class _IO(socket_tools.Base):
         super().update_uri(f"//{self.host}", self.port)
 
     def read(self, data, conn):
-        try: decoded = data.strip().decode()
-        except: return print(traceback.format_exc())
-        for data in decoded.replace("\n", self._break).split(self._break):
-            self.on_receive_raw_data(data)
+        for data_ in data.split(self._break):
+            try: decoded = data_.decode()
+            except: print(traceback.format_exc())
+            else: self.on_receive_raw_data(decoded)
 
     def send(self, data):
         super().send(data)
         self.write(self._encode(data))
 
     def _encode(self, data):
-        return ("%s%s"%(data, self._break)).encode("ascii")
+        return (b"%s%s"%(data.encode("ascii"), self._break))
 
     def schedule(self, *args, **xargs):
         super().schedule(*args, **xargs)
@@ -82,7 +82,7 @@ class TelnetClient(_IO, socket_tools.Client, AbstractClient):
 class TelnetServer(_IO, socket_tools.Server, AbstractServer):
     init_args_help = ("//LISTEN_IP", "LISTEN_PORT")
 
-    def __init__(self, listen_host="127.0.0.1", listen_port=0, *args, linebreak="\r", verbose=1, **xargs):
+    def __init__(self, listen_host="127.0.0.1", listen_port=0, *args, linebreak=b"\r", verbose=1, **xargs):
         if listen_host.startswith("//"): listen_host = listen_host[2:]
         super().__init__(host=listen_host, port=int(listen_port), *args, **xargs, verbose=verbose)
         self._break = linebreak
