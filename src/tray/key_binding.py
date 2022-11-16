@@ -71,22 +71,18 @@ class KeyBinding(TargetApp):
         self._feature_changed.set() # break _feature_changed.wait()
 
     def on_activated_mouse_move(self, x, y):
-        f = self.target.features.get(config.gesture_feature)
-        if f and self._position_ref is not None:
-            try:
-                new_value = self._position_ref-int((y-self._y_ref)*config["hotkeys"]["mouse"][0]["sensitivity"])
-                max_ = min(f.max, f.get()+Decimal(config["hotkeys"]["mouse"][0]["max_step"]))
-                min_ = f.min
-                if new_value > max_ or new_value < min_:
-                    # mouse has been moved to an illegal point
-                    new_value = max(min_, min(max_, new_value))
-                    self.set_position_reference(y, new_value)
-                self.set_feature_value(new_value)
-            except ConnectionError: pass
-
-    def set_feature_value(self, value):
+        if (f := self.target.features.get(config.gesture_feature)) is None: return
+        if self._position_ref is None: return
+        new_value = self._position_ref-int((y-self._y_ref)*config["hotkeys"]["mouse"][0]["sensitivity"])
+        try: max_ = min(f.max, f.get()+Decimal(config["hotkeys"]["mouse"][0]["max_step"]))
+        except ConnectionError: return
+        min_ = f.min
+        if new_value > max_ or new_value < min_:
+            # mouse has been moved to an illegal point
+            new_value = max(min_, min(max_, new_value))
+            self.set_position_reference(y, new_value)
         with self._set_feature_lock:
-            self._new_value = value
+            self._new_value = new_value
             self._feature_step.set()
 
     def on_volume_key_press(self, button):
