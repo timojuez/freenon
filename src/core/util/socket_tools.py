@@ -9,7 +9,7 @@ from queue import Queue, Empty
 from . import AbstractMainloopManager
 
 
-PORT=654321
+PORT=54321
 
 
 class Base(AbstractMainloopManager):
