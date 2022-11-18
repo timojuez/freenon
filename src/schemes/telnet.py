@@ -1,9 +1,9 @@
-from ..core import features, TelnetScheme
+from ..core import features, SocketScheme
 
 
-class Telnet(TelnetScheme):
-    """ Raw Telnet Low Level Target """
-    description = "Reads telnet data without further interpretation"
+class Telnet(SocketScheme):
+    """ Raw Data Low Level Target """
+    description = "Reads data without further interpretation"
     
     def query(self, cmd, matches=None):
         """

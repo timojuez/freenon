@@ -1,6 +1,6 @@
 """
-The classes AbstractClient and TelnetClient help you to stay synchronised with
-values from a Telnet or non-Telnet server. A client supports features. See features.py.
+The classes AbstractClient and SocketClient help you to stay synchronised with
+remote values. A client supports features. See features.py.
 """
 
 import sys, re

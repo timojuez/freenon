@@ -40,7 +40,7 @@ class _IO(socket_tools.Base):
         self.trigger_mainloop()
 
 
-class TelnetClient(_IO, socket_tools.Client, AbstractClient):
+class SocketClient(_IO, socket_tools.Client, AbstractClient):
     """
     This class connects to the server via LAN and executes commands
     @host is the server's hostname or IP.
@@ -82,7 +82,7 @@ class TelnetClient(_IO, socket_tools.Client, AbstractClient):
             except ConnectionError: return self._stoploop.wait(3)
 
 
-class TelnetServer(_IO, socket_tools.Server, AbstractServer):
+class SocketServer(_IO, socket_tools.Server, AbstractServer):
     init_args_help = ("//LISTEN_IP", "LISTEN_PORT")
 
     def __init__(self, listen_host="127.0.0.1", listen_port=0, *args, linebreak=b"\r", verbose=1, **xargs):
@@ -108,7 +108,7 @@ class TelnetServer(_IO, socket_tools.Server, AbstractServer):
             print(f"[{self.__class__.__name__}] Operating on {self.uri}", file=sys.stderr)
 
 
-class TelnetScheme(AbstractScheme):
-    Server = TelnetServer
-    Client = TelnetClient
+class SocketScheme(AbstractScheme):
+    Server = SocketServer
+    Client = SocketClient
 

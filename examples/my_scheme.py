@@ -5,19 +5,19 @@
 """
 
 from decimal import Decimal
-from hificon.core import TelnetScheme, features
+from hificon.core import SocketScheme, features
 from hificon import register_scheme, hifish
 
 
-class MyTelnetScheme(TelnetScheme):
-    """ try by running `examples$ python3 -m hificon.hifish -t emulate:my_scheme.MyTelnetScheme`
-    or start the server by `examples$ python3 -m hificon.server -t my_scheme.MyTelnetScheme://127.0.0.1:1234`
-    and start the client by `examples$ python3 -m hificon.hifish -t my_scheme.MyTelnetScheme://127.0.0.1:1234`
+class MySocketScheme(SocketScheme):
+    """ try by running `examples$ python3 -m hificon.hifish -t emulate:my_scheme.MySocketScheme`
+    or start the server by `examples$ python3 -m hificon.server -t my_scheme.MySocketScheme://127.0.0.1:1234`
+    and start the client by `examples$ python3 -m hificon.hifish -t my_scheme.MySocketScheme://127.0.0.1:1234`
     """
     description = "My custom scheme"
 
 
-@MyTelnetScheme.add_feature(overwrite=True)
+@MySocketScheme.add_feature(overwrite=True)
 class Power(features.BoolFeature):
     call = "?pwr"
 
@@ -28,7 +28,7 @@ class Power(features.BoolFeature):
     def set_on_server(self, value): self.set(value)
 
 
-@MyTelnetScheme.add_feature
+@MySocketScheme.add_feature
 class Value(features.DecimalFeature):
     min = 0
     max = 10
@@ -42,6 +42,6 @@ class Value(features.DecimalFeature):
 
 
 if __name__ == "__main__":
-    register_scheme("myscheme", MyTelnetScheme)
+    register_scheme("myscheme", MySocketScheme)
     hifish.main()
 

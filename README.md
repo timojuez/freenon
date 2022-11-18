@@ -37,7 +37,7 @@
 ### Supported Schemes
 
 - Denon/Marantz AVR compatible (tested with Denon X1400H)
-- Raw Telnet
+- Raw Data
 
 For a complete list, run `hifish --help-schemes`
 
@@ -158,7 +158,7 @@ python3 -m hificon.create_script -t emulate:denon full > example_script.hifi
 
 
 ### Server Software
-You can implement an own scheme or protocol. Client and Server is being implemented into one single class. Inherit e.g. the class AbstractScheme or TelnetScheme. Pay attention to the methods `poll_feature` and `set_feature`.
+You can implement an own scheme or protocol. Client and Server is being implemented into one single class. Inherit e.g. the class AbstractScheme or SocketScheme. Pay attention to the methods `poll_feature` and `set_feature`.
 Start the server by running `python3 -m hificon.server --target SCHEME_MODULE.CLASS`
 
 If the prefix `emulate:` is being added to `--target`, a dummy server will be run for testing. You can connect to it using the clients mentioned above.
@@ -171,7 +171,7 @@ Examples:
 ## Development
 
 ### Support for other devices
-It is possible to implement the support e.g. for other AVR brands like Yamaha, Pioneer, Onkyo. It is easy to connect to any network device that communicates via telnet. See src/schemes/* as an example. See also "target" parameter in config and in hifish. Hint: `hifish --target telnet://IP:PORT -f` prints all data received from `IP` via telnet.
+It is possible to implement the support e.g. for other AVR brands like Yamaha, Pioneer, Onkyo. It is easy to connect to any network device that communicates with a socket. See src/schemes/* as an example. See also "target" parameter in config and in hifish. Hint: `hifish --target telnet://IP:PORT -f` prints all data received from `IP` via socket.
 
 ### Reverse Engineering a Target
 `hifish -f` opens a shell and prints all received data. Meanwhile change settings on the target e.g. with a remote and observe on what it prints. This may help you to program an own scheme.
@@ -186,7 +186,7 @@ Your requirement will be the hificon package.
 ### AVR Emulator
 For testing purposes, there is a server emulator software. Start it with `python3 -m hificon.server --target emulate:SCHEME`.
 
-The Denon AVR software emulator acts nearly like the amp's Telnet service. Try it out: 
+The Denon AVR software emulator acts nearly like the amp's socket. Try it out: 
 `python3 -m hificon.server --target emulate:denon://127.0.0.1:1234`
 and connect to it e.g. via HiFiSh:
 `hifish --target denon://127.0.0.1:1234`.

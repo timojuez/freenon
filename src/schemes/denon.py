@@ -6,7 +6,7 @@ import sys, math
 from urllib.parse import urlparse
 from threading import Timer
 from decimal import Decimal, InvalidOperation
-from ..core import features, TelnetScheme
+from ..core import features, SocketScheme
 from ..core.transmission.types import ClientType, ServerType
 
 
@@ -148,7 +148,7 @@ Category = type("Category", tuple(), dict(
 ))
 
 
-class Denon(TelnetScheme):
+class Denon(SocketScheme):
     description = "Denon/Marantz AVR compatible (tested with Denon X1400H)"
     _pulse = "CV?" # workaround for denon to retrieve CV?
     

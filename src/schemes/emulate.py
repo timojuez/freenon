@@ -67,7 +67,7 @@ class DummyEmulate(Emulate):
     def _get_dummy_scheme(cls, scheme):
         Scheme = get_scheme(scheme)
         class DummyScheme(Scheme):
-            """ Server/client without e.g. Telnet inheritance """
+            """ Server/client without a socket """
             Client = type("Client", (DummyClientMixin, Scheme, AbstractClient), {})
             Server = type("Server", (Scheme, AbstractServer), {})
         return DummyScheme

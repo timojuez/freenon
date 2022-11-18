@@ -10,8 +10,7 @@ Run client:
 
 import time
 from threading import Thread, Lock
-from hificon.core.transmission.telnet import TelnetServer, TelnetScheme
-from hificon.core.transmission import features
+from hificon.core import features, SocketServer, SocketScheme
 from hificon import Target, register_scheme
 
 
@@ -36,7 +35,7 @@ class ExternalCounter:
                 self.feature.set(self.value) # sync clients
 
 
-class MyServer(TelnetServer):
+class MyServer(SocketServer):
     """ Adds a custom value START_COUNT to init and changes the URI to
     SCHEME://IP:PORT:START_COUNT
     """
@@ -47,7 +46,7 @@ class MyServer(TelnetServer):
         if start: self.features.counter.external_counter.set(int(start))
 
 
-class MyScheme(TelnetScheme):
+class MyScheme(SocketScheme):
     """ must have the reference to MyServer """
     description = "My custom scheme"
     Server = MyServer
