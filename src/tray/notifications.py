@@ -12,8 +12,9 @@ class GaugeNotification(GladeGtk, NotificationBase, metaclass=Singleton):
     GLADE = "../share/gauge_notification.glade"
     _timeout = 2
     
-    def __init__(self, *args, **xargs):
+    def __init__(self, *args, on_click=None, **xargs):
         super().__init__(*args, **xargs)
+        self._on_click = on_click
         self._position()
         self.level = self.builder.get_object("level")
         self.title = self.builder.get_object("title")
@@ -23,8 +24,10 @@ class GaugeNotification(GladeGtk, NotificationBase, metaclass=Singleton):
     
     def set_timeout(self, t): self._timeout = t/1000
     
-    def on_click(self, *args): self.hide()
-    
+    def on_click(self, *args):
+        self.hide()
+        if self._on_click: self._on_click()
+
     @gtk
     def update(self, title, message, value, min, max):
         if not (min <= value <= max):
