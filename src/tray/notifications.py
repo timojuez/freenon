@@ -77,17 +77,24 @@ class TextNotification(FeatureNotification, Notification):
 
 
 class NumericNotification(FeatureNotification):
+    callback = None
     
-    def __init__(self, scale_popup, *args, **xargs):
+    def __init__(self, scale_popup, *args, default_click_action=None, **xargs):
         super().__init__(*args, **xargs)
         self.scale_popup = scale_popup
-        self._n = GaugeNotification()
+        self._default_click_action = default_click_action
+        self._n = GaugeNotification(on_click=self.default_click_action)
         self._n.set_timeout(config["notifications"]["timeout"])
+
+    @classmethod
+    def default_click_action(self):
+        if self.callback: self.callback()
 
     def show(self):
         if self.scale_popup._current_feature == self.f and self.scale_popup.visible: return
         try: value = self.f.get()
         except ConnectionError: value = self.f.min
+        self.__class__.callback = self._default_click_action
         self._n.update(
             title=self.f.name,
             message=str(self.f),
@@ -118,9 +125,10 @@ class NotificationMixin(TrayMixin, KeyBinding, PowerControlMixin, TargetApp):
         self.target.preload_features.update(("name", config.power))
 
     def create_notification(self, f):
-        if isinstance(f, features.NumericFeature): return NumericNotification(self.scale_popup, f)
+        if isinstance(f, features.NumericFeature): return NumericNotification(self.scale_popup, f,
+            default_click_action=lambda: self.on_notification_clicked(f))
         if isinstance(f, features.SelectFeature): return TextNotification(f,
-            default_click_action=lambda *_: self.on_notification_clicked(f))
+            default_click_action=lambda: self.on_notification_clicked(f))
 
     def on_notification_clicked(self, f):
         dialog = Gtk.MessageDialog(
