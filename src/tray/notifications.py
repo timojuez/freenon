@@ -41,9 +41,9 @@ class GaugeNotification(GladeGtk, NotificationBase, metaclass=Singleton):
         self.window.move(self.window.get_screen().get_width()-self.width-50, 170)
 
     def show(self):
-        super().show()
         try: self._timer.cancel()
         except: pass
+        super().show()
         self._timer = Timer(self._timeout, self.hide)
         self._timer.start()
 
