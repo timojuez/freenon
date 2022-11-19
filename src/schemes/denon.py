@@ -1069,6 +1069,8 @@ class PowerOnLevel(LooseIntFeature):
     id = "power_on_level_numeric"
     function = "SSVCTZMAPON "
     call = "SSVCTZMA ?"
+    def resend(self):
+        return #handled by power_on_level
 
 
 @Denon.add_feature
