@@ -1,4 +1,4 @@
-#!/usr/bin/env hifish
+#!/usr/bin/env python3 -m hificon.hifish
 
 def on_feature_change(key, value):
     print("\nChanged %s to %s."%(key,value))

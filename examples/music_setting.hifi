@@ -1,4 +1,4 @@
-#!/usr/bin/env hifish
+#!/usr/bin/env python3 -m hificon.hifish
 $power = True
 #$display = 'Bright'
 $front_speaker = 'B'

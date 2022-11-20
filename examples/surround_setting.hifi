@@ -1,4 +1,4 @@
-#!/usr/bin/env -S hifish -vvvvvv
+#!/usr/bin/env python3 -m hificon.hifish -vvv
 $power = True
 #$display = 'Dark'
 $sound_mode = 'Movie'
