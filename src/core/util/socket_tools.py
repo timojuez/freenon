@@ -48,12 +48,19 @@ class Base(AbstractMainloopManager):
 
     def disconnect(self, conn=None):
         if sock := conn or self._sockets.pop("main", None):
-            self.sel.unregister(sock)
-            try: sock.shutdown(socket.SHUT_RDWR)
-            except OSError: pass
-            sock.close()
-            try: del self._send_queue[sock]
-            except KeyError: pass
+            self.remove_socket(sock)
+
+    def add_socket(self, sock):
+        self._send_queue[sock] = Queue()
+        self.sel.register(sock, selectors.EVENT_READ, self.connection)
+
+    def remove_socket(self, sock):
+        self.sel.unregister(sock)
+        try: sock.shutdown(socket.SHUT_RDWR)
+        except OSError: pass
+        sock.close()
+        try: del self._send_queue[sock]
+        except KeyError: pass
 
     def trigger_mainloop(self):
         if self._triggering.acquire(blocking=False):
@@ -127,8 +134,7 @@ class Server(Base):
             if self._verbose > 1: print(repr(e), file=sys.stderr)
             return
         conn.setblocking(False)
-        self._send_queue[conn] = Queue()
-        self.sel.register(conn, selectors.EVENT_READ, self.connection)
+        self.add_socket(conn)
 
 
 class Client(Base):
@@ -138,8 +144,7 @@ class Client(Base):
         self._sockets["main"] = socket.create_connection(self.address, timeout=timeout)
         self._sockets["main"].setblocking(False)
         self._send_queue.clear()
-        self._send_queue[self._sockets["main"]] = Queue()
-        self.sel.register(self._sockets["main"], selectors.EVENT_READ, self.connection)
+        self.add_socket(self._sockets["main"])
 
     #def mainloop_hook(self):
     #    if self.pulse is not None:
