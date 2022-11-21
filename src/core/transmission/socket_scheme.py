@@ -7,6 +7,7 @@ from .abstract import AbstractScheme, AbstractClient, AbstractServer
 
 
 PORT = 23
+BUFFER_LENGTH = 1024 # bytes
 
 
 class _IO(socket_tools.Base):
@@ -29,12 +30,13 @@ class _IO(socket_tools.Base):
         super().update_uri(f"//{self.host}", self.port)
 
     def read(self, data, conn):
-        self._buf[conn] += data
-        while self._break in self._buf[conn]:
-            data_, self._buf[conn] = self._buf[conn].split(self._break, 1)
+        buf = self._buf[conn] + data
+        while self._break in buf:
+            data_, buf = buf.split(self._break, 1)
             try: decoded = data_.decode()
             except: print(traceback.format_exc())
             else: self.on_receive_raw_data(decoded)
+        self._buf[conn] = buf[-BUFFER_LENGTH:]
 
     def send(self, data):
         super().send(data)
