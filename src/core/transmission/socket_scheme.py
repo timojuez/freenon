@@ -101,8 +101,8 @@ class SocketServer(_IO, socket_tools.Server, AbstractServer):
         self.bind(enter=on_enter)
         return client
 
-    def connect(self):
-        super().connect()
+    def enter(self):
+        super().enter()
         self.update_uri()
         if self.verbose >= 1:
             print(f"[{self.__class__.__name__}] Operating on {self.uri}", file=sys.stderr)

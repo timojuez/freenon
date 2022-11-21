@@ -44,12 +44,6 @@ class Base(AbstractMainloopManager):
             name, sock = self._sockets.popitem()
             sock.close()
 
-    def connect(self): pass
-
-    def disconnect(self):
-        if sock := self._sockets.pop("main", None):
-            self.remove_socket(sock)
-
     def add_socket(self, sock):
         self._send_queue[sock] = Queue()
         self.sel.register(sock, selectors.EVENT_READ, self.connection)
@@ -119,7 +113,6 @@ class Server(Base):
         finally: self.connect()
 
     def connect(self):
-        super().connect()
         self._sockets["main"] = socket.create_server(self.address, backlog=100)
         self._sockets["main"].setblocking(False)
         try: self._sockets["main"].setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -140,11 +133,13 @@ class Server(Base):
 class Client(Base):
 
     def connect(self, timeout=None):
-        super().connect()
         self._sockets["main"] = socket.create_connection(self.address, timeout=timeout)
         self._sockets["main"].setblocking(False)
         self._send_queue.clear()
         self.add_socket(self._sockets["main"])
+
+    def disconnect(self):
+        if sock := self._sockets.pop("main", None): self.remove_socket(sock)
 
     #def mainloop_hook(self):
     #    if self.pulse is not None:
