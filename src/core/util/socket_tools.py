@@ -46,8 +46,8 @@ class Base(AbstractMainloopManager):
 
     def connect(self): pass
 
-    def disconnect(self, conn=None):
-        if sock := conn or self._sockets.pop("main", None):
+    def disconnect(self):
+        if sock := self._sockets.pop("main", None):
             self.remove_socket(sock)
 
     def add_socket(self, sock):
@@ -87,7 +87,7 @@ class Base(AbstractMainloopManager):
                 else:
                     try: conn.sendall(msg)
                     except (OSError, ConnectionError):
-                        self.disconnect(conn)
+                        self.remove_socket(conn)
                         break
                     except: traceback.print_exc()
 
@@ -99,7 +99,7 @@ class Base(AbstractMainloopManager):
         if data:
             self.read(data, conn)
         else:
-            self.disconnect(conn)
+            self.remove_socket(conn)
 
     def read(self, data, conn): raise NotImplementedError()
 
