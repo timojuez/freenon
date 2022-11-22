@@ -1,6 +1,6 @@
 import argparse, time, sys, os
 from .core.transmission.features import NumericFeature
-from . import Target, PKG_NAME
+from . import Target, hifish
 
 
 class Main:
@@ -22,7 +22,7 @@ class Main:
         self.raw = args.raw
         self.relative = getattr(args, "relative", False)
         with Target(args.target, verbose=args.verbose) as self.t:
-            self.append(f"#!/usr/bin/env -S python3 -m {PKG_NAME}.hifish")
+            self.append(f"#!/usr/bin/env -S python3 -m {hifish.__name__}")
             self.append("#")
             self.append(f"# CREATED WITH {script}")
             self.append("#")
