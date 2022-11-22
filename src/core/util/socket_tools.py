@@ -5,7 +5,6 @@ The function "send" sends dicts.
 
 import selectors, socket, json, sys, traceback
 from threading import Thread, Lock
-from queue import Queue, Empty
 from . import AbstractMainloopManager
 
 
@@ -33,7 +32,7 @@ class Base(AbstractMainloopManager):
 
     def enter(self):
         self._sockets["read"], self._sockets["write"] = socket.socketpair()
-        self._send_queue = {}
+        self._connections = set()
         self.sel = selectors.DefaultSelector()
         self.sel.register(self._sockets["read"], selectors.EVENT_READ)
         return super().enter()
@@ -45,7 +44,7 @@ class Base(AbstractMainloopManager):
             sock.close()
 
     def add_socket(self, sock):
-        self._send_queue[sock] = Queue()
+        self._connections.add(sock)
         self.sel.register(sock, selectors.EVENT_READ, self.connection)
 
     def remove_socket(self, sock):
@@ -53,8 +52,7 @@ class Base(AbstractMainloopManager):
         try: sock.shutdown(socket.SHUT_RDWR)
         except OSError: pass
         sock.close()
-        try: del self._send_queue[sock]
-        except KeyError: pass
+        self._connections.remove(sock)
 
     def trigger_mainloop(self):
         if self._triggering.acquire(blocking=False):
@@ -74,16 +72,6 @@ class Base(AbstractMainloopManager):
                 break
             callback = key.data
             callback(key.fileobj, mask)
-        for conn, queue in self._send_queue.copy().items():
-            for _ in range(50):
-                try: msg = queue.get(block=False)
-                except Empty: break
-                else:
-                    try: conn.sendall(msg)
-                    except (OSError, ConnectionError):
-                        self.remove_socket(conn)
-                        break
-                    except: traceback.print_exc()
 
     def connection(self, conn, mask):
         try: data = conn.recv(1000)
@@ -99,11 +87,11 @@ class Base(AbstractMainloopManager):
 
     def write(self, msg, conn=None):
         if conn:
-            self._send_queue[conn].put(msg)
+            try: conn.sendall(msg)
+            except (OSError, ConnectionError): self.remove_socket(conn)
+            except: traceback.print_exc()
         else:
-            for conn, queue in self._send_queue.copy().items():
-                queue.put(msg)
-        self.trigger_mainloop()
+            for conn in self._connections.copy(): self.write(msg, conn)
 
 
 class Server(Base):
@@ -135,7 +123,7 @@ class Client(Base):
     def connect(self, timeout=None):
         self._sockets["main"] = socket.create_connection(self.address, timeout=timeout)
         self._sockets["main"].setblocking(False)
-        self._send_queue.clear()
+        self._connections.clear()
         self.add_socket(self._sockets["main"])
 
     def disconnect(self):
@@ -143,7 +131,7 @@ class Client(Base):
 
     #def mainloop_hook(self):
     #    if self.pulse is not None:
-    #        for q in self._send_queue.copy().values(): q.put(self.pulse)
+    #        self.write(self.pulse)
     #    super().mainloop_hook()
 
 
