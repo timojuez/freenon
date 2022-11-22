@@ -43,7 +43,7 @@ class CLI:
                 self.target = Target(f"emulate:{self.args.help_features}")
             return self.print_help_features()
         matches = (lambda cmd:cmd.startswith(self.args.ret)) if self.args.ret else None
-        if len(self.args.command) == 0 and not self.args.file: self.print_header()
+        if len(self.args.command) == 0 and not self.args.file and not self.args.exit: self.print_header()
         if self.args.follow: self.target.bind(on_receive_raw_data=self.receive)
         with self.target:
             self.compiler = Compiler(
