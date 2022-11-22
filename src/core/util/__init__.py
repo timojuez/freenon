@@ -53,6 +53,7 @@ class AbstractMainloopManager:
     def stop(self):
         self.mainloop_quit()
         self._mainloopt.join()
+        self.exit()
 
     def enter(self):
         """ entering mainloop """
@@ -65,16 +66,15 @@ class AbstractMainloopManager:
     def mainloop(self):
         """ listens on server for events and calls on_feature_change. Return when connection closed """
         self.enter()
-        self._mainloop()
+        try:
+            self._mainloop()
+        finally:
+            self.exit()
 
     def _mainloop(self):
         """ listens on server for events and calls on_feature_change. Return when connection closed """
         self._stoploop.clear()
-        #self.enter()
-        try:
-            while not self._stoploop.is_set(): self.mainloop_hook()
-        finally:
-            self.exit()
+        while not self._stoploop.is_set(): self.mainloop_hook()
 
     def mainloop_hook(self):
         """ This will be called regularly by mainloop """
