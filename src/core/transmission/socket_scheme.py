@@ -1,4 +1,4 @@
-import socket, traceback, sys
+import socket, traceback, sys, time
 from threading import Lock
 from contextlib import suppress
 from datetime import datetime, timedelta
@@ -48,6 +48,10 @@ class _IO(socket_tools.Base):
     def schedule(self, *args, **xargs):
         super().schedule(*args, **xargs)
         self.trigger_mainloop()
+
+    def handle_uri_path(self, *args, **xargs):
+        super().handle_uri_path(*args, **xargs)
+        time.sleep(.2)
 
 
 class SocketClient(_IO, socket_tools.Client, AbstractClient):
