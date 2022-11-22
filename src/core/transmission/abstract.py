@@ -85,13 +85,18 @@ class AbstractTarget(Bindable, AbstractMainloopManager):
         consumed = [f.consume(data) for f_id,f in self.features.items() if f.matches(data)]
         if not consumed: self.features.fallback.consume(data)
 
-    def handle_query(self, query):
-        for key, val in parse_qsl(query, True):
-            if val: # ?fkey=val
-                f = self.features[key]
-                convert = {bool: lambda s:s[0].lower() in "yt1"}.get(f.type, f.type)
-                self.set_feature_value(f, convert(val))
-            else: self.send(key) # ?COMMAND #FIXME: use self.on_receive_raw_data for server
+    def handle_uri_path(self, uri):
+        if uri.path.startswith("/get/") and (f := self.features.get(uri.path[len("/get/"):])):
+            print(f.get_wait())
+        elif uri.path in ("/", "", "/set"):
+            for key, val in parse_qsl(uri.query[1:], True):
+                if val: # ?fkey=val
+                    f = self.features[key]
+                    convert = {bool: lambda s:s[0].lower() in "yt1"}.get(f.type, f.type)
+                    self.set_feature_value(f, convert(val))
+                else: self.send(key) # ?COMMAND #FIXME: use self.on_receive_raw_data for server
+        else:
+            print("404")
 
 
 class AttachedClientMixin:
@@ -289,9 +294,9 @@ class _AbstractClient(ClientType, AbstractTarget):
     @log_call
     def on_disconnected(self): self.connected = False
 
-    def handle_query(self, *args, **xargs):
+    def handle_uri_path(self, *args, **xargs):
         self.connect()
-        super().handle_query(*args, **xargs)
+        super().handle_uri_path(*args, **xargs)
 
 
 class AbstractClient(_PreloadMixin, _FeaturesMixin, _AbstractClient): pass
