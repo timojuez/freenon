@@ -15,7 +15,7 @@ def Target(uri=None, *args, role="client", **xargs):
     """
     if uri and "?" in uri: uri, query = uri.split("?",1)
     else: query = None
-    if uri is None: uri = config.get("Target", "uri").split("?",1)[0]
+    if not uri: uri = config.get("Target", "uri").split("?",1)[0]
     uri = uri.split(":")
     Scheme = getattr(get_scheme(uri.pop(0)), f"new_{role}")
     target = Scheme(*uri, *args, **xargs)
