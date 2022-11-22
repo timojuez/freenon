@@ -931,7 +931,7 @@ class Idle(features.ServerToClientFeatureMixin, BoolFeature): #undocumented
 class Bitrate(features.ServerToClientFeatureMixin, SelectFeature):
     category = Category.INPUT
     function = "SSINFAISFSV "
-    translation = {"NON": "-"}
+    translation = {"NON": "-", "441": "44.1 kHz", "48K": "48 kHz"}
     dummy_value = "441"
 
 
