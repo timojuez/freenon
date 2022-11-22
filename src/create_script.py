@@ -22,7 +22,7 @@ class Main:
         self.raw = args.raw
         self.relative = getattr(args, "relative", False)
         with Target(args.target, verbose=args.verbose) as self.t:
-            self.append(f"#!/usr/bin/env python3 -m {PKG_NAME}.hifish")
+            self.append(f"#!/usr/bin/env -S python3 -m {PKG_NAME}.hifish")
             self.append("#")
             self.append(f"# CREATED WITH {script}")
             self.append("#")

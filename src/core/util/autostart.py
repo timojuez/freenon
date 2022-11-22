@@ -53,7 +53,7 @@ class AutostartGnu(_Autostart):
             "Encoding=UTF-8",
             "Type=Application",
             f"Name={self.name}",
-            f"Exec=/usr/bin/env python3 -m {self.module}",
+            f"Exec=/usr/bin/env -S python3 -m {self.module}",
             "StartupNotify=false",
             f"Terminal={str(self.terminal).lower()}",
             "Hidden=false",
