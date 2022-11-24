@@ -44,15 +44,15 @@ class Base(AbstractMainloopManager):
             sock.close()
 
     def add_socket(self, sock):
-        self._connections.add(sock)
         self.sel.register(sock, selectors.EVENT_READ, self.connection)
+        self._connections.add(sock)
 
     def remove_socket(self, sock):
+        self._connections.remove(sock)
         self.sel.unregister(sock)
         try: sock.shutdown(socket.SHUT_RDWR)
         except OSError: pass
         sock.close()
-        self._connections.remove(sock)
 
     def trigger_mainloop(self):
         if self._triggering.acquire(blocking=False):
