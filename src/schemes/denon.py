@@ -230,7 +230,7 @@ class DecimalFeature(NumericFeature, features.DecimalFeature):
     min = 0
     max = 98
 
-    def __str__(self): return "%0.1f"%self.get() if self.isset() else super().__str__()
+    def __str__(self): return "%0.1f"%self.get() if self.is_set() else super().__str__()
 
     @classmethod
     def _roundVolume(self, vol): return self.step*round(vol/self.step)
@@ -445,7 +445,7 @@ class Source(SelectFeature):
 
     def on_source_names_change(self, source_names):
         with self._lock:
-            if self.isset():
+            if self.is_set():
                 old = self.serialize(self._val)
                 self.translation.update(source_names)
                 self._val = self.unserialize(old)
@@ -576,7 +576,7 @@ class SoundModeSetting(SelectFeature):
 
     def on_sound_modes_change(self, sound_modes):
         self.translation = sound_modes
-        if self.isset():
+        if self.is_set():
             self.on_change(self.get()) # cause listeners to update from self.translation
         
     def matches(self, data): return super().matches(data) and data[len(self.function)+2] == "1"
@@ -1081,7 +1081,7 @@ class PowerOnLevel(SelectFeature):
     translation = {"MUT":"Muted", "LAS":"Unchanged"}
     def on_change(self, val):
         super().on_change(val)
-        if not self.target.features.power_on_level_numeric.isset():
+        if not self.target.features.power_on_level_numeric.is_set():
             self.target.features.power_on_level_numeric.set(0)
 
 
@@ -1158,8 +1158,8 @@ for cat_code, cat_id, cat_name, l in EQ_OPTIONS:
                 
                 def update(self, val, cat_name=cat_name, bound=bound):
                     if isinstance(self.target, ServerType): return
-                    isset = self._channels.isset() and self._channels.get() == cat_name \
-                        and self._speaker_eq.isset()
+                    isset = self._channels.is_set() and self._channels.get() == cat_name \
+                        and self._speaker_eq.is_set()
                     super().set(self._speaker_eq.get()[bound]) if isset else self.unset()
                 
                 def set(self, value, bound=bound): self._speaker_eq.set_value(bound, self.type(value))
@@ -1168,8 +1168,8 @@ for cat_code, cat_id, cat_name, l in EQ_OPTIONS:
                     self._speaker_eq.remote_set_value(bound, self.type(value))
                 
                 def async_poll(self, *args, **xargs):
-                    if not self._channels.isset(): self._channels.async_poll(*args, **xargs)
-                    if not self._speaker_eq.isset(): self._speaker_eq.async_poll(*args, **xargs)
+                    if not self._channels.is_set(): self._channels.async_poll(*args, **xargs)
+                    if not self._speaker_eq.is_set(): self._speaker_eq.async_poll(*args, **xargs)
 
 
 @Denon.add_feature

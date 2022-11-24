@@ -29,14 +29,15 @@ class Base(TargetApp, TargetController):
         super().on_stop_playing()
         # execute on_idle() if target is not playing
         try: target_playing = (
-            self.target.features[config.idle].isset() and self.target.features[config.idle].get() == False
-            and self.target.features[config.power].isset() and self.target.features[config.power].get() == True)
+            self.target.features[config.idle].is_set() and self.target.features[config.idle].get() == False
+            and self.target.features[config.power].is_set() and self.target.features[config.power].get() == True
+            )
         except (ConnectionError, KeyError): target_playing = False
         if not target_playing: self.on_idle()
         try: f = self.target.features[config.idle]
         except KeyError: pass
         else:
-            if not f.isset():
+            if not f.is_set():
                 try: f.async_poll()
                 except ConnectionError: pass
 

@@ -225,11 +225,11 @@ class Icon(Bindable):
 
     def update_icon(self):
         f = self.target.features.get(config.tray_feature)
-        if (power := self.target.features.get(config.power)) and power.isset() and power.get() == False:
+        if (power := self.target.features.get(config.power)) and power.is_set() and power.get() == False:
             return self.set_icon("power")
-        if (muted := self.target.features.get(config.muted)) and muted.isset() and muted.get():
+        if (muted := self.target.features.get(config.muted)) and muted.is_set() and muted.get():
             return self.set_icon("audio-volume-muted")
-        if f and f.isset():
+        if f and f.is_set():
             f_val = f.get()
             if not (f.min <= f_val <= f.max):
                 sys.stderr.write(
@@ -331,7 +331,7 @@ class TrayMixin(Tray):
 
     def _save_set_feature_to_relative_value(self, f_id, add):
         f = self.target.features.get(f_id)
-        if not f or not f.isset(): return
+        if not f or not f.is_set(): return
         try:
             value = f.get()+add
             snapped_value = min(max(f.min, value), f.max)

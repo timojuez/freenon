@@ -27,7 +27,7 @@ class FunctionCall(object):
 
     def __repr__(self): return "<pending%s>"%self._func
 
-    _missing_features = property(lambda self: list(filter(lambda f:not f.isset(), self._features)))
+    _missing_features = property(lambda self: list(filter(lambda f:not f.is_set(), self._features)))
 
     def try_call(self):
         with self._lock:
@@ -70,7 +70,7 @@ class Features(AttrDict):
         threads = [Thread(target=f.wait_poll, daemon=True, name="wait_for") for f in features]
         for t in threads: t.start()
         for t in threads: t.join()
-        return all([f.isset() for f in features])
+        return all([f.is_set() for f in features])
         
 
 class FeatureInterface(object):
@@ -150,7 +150,7 @@ class AsyncFeature(FeatureInterface, Bindable, metaclass=_MetaFeature):
     name = property(lambda self:self.__class__.__name__)
     
     def __str__(self):
-        with self: return str(self.get()) if self.isset() else "..."
+        with self: return str(self.get()) if self.is_set() else "..."
 
     def __enter__(self):
         self._lock.__enter__()
@@ -160,7 +160,7 @@ class AsyncFeature(FeatureInterface, Bindable, metaclass=_MetaFeature):
         self._lock.__exit__(*args, **xargs)
 
     def get(self):
-        if not self.isset(): raise ConnectionError(f"`{self.id}` not available. Use Target.schedule")
+        if not self.is_set(): raise ConnectionError(f"`{self.id}` not available. Use Target.schedule")
         else: return self._val
     
     def remote_set(self, value, force=False):
@@ -184,7 +184,7 @@ class AsyncFeature(FeatureInterface, Bindable, metaclass=_MetaFeature):
         self._block_on_remote_set_resetter = Timer(1, lambda: setattr(self, "_block_on_remote_set", None))
         self._block_on_remote_set_resetter.start()
     
-    def isset(self): return self._val != None
+    def is_set(self): return self._val != None
         
     def unset(self):
         with self._lock:
@@ -210,7 +210,7 @@ class AsyncFeature(FeatureInterface, Bindable, metaclass=_MetaFeature):
 
     def _set_default(self):
         with self._lock:
-            if not self.isset(): self._set(self.default_value)
+            if not self.is_set(): self._set(self.default_value)
     
     def resend(self): return AsyncFeature.remote_set(self, self._val, force=True)
     
@@ -230,7 +230,7 @@ class AsyncFeature(FeatureInterface, Bindable, metaclass=_MetaFeature):
         assert(value is not None)
         self._prev_val = self._val
         self._val = value
-        if not self.isset(): return
+        if not self.is_set(): return
         if self._val != self._prev_val: self.on_change(self._val)
         if self._prev_val == None: self.on_set()
         self.on_processed(value)
@@ -239,7 +239,7 @@ class AsyncFeature(FeatureInterface, Bindable, metaclass=_MetaFeature):
         """ Register an observer with bind() and call the callback as soon as possible
         to stay synchronised """
         with self._lock:
-            if self.isset():
+            if self.is_set():
                 if on_change: on_change(self.get())
                 if on_set: on_set()
                 if on_processed: on_processed(self.get())
@@ -300,7 +300,7 @@ class SynchronousFeature(AsyncFeature):
         """ Poll and wait if Feature is unset. Returns False on timeout and True otherwise """
         if not self.target.connected: return False
         if force: self.unset()
-        if not self.isset():
+        if not self.is_set():
             try: self.async_poll(force)
             except ConnectionError: return False
             if not self._event_on_set.wait(timeout=MAX_CALL_DELAY+.1): return False
@@ -372,8 +372,8 @@ class ClientToServerFeatureMixin:
 
     def get(self): return "(select)" if isinstance(self.target, ClientType) else super().get()
 
-    def isset(self):
-        return True if isinstance(self.target, ClientType) else super().isset()
+    def is_set(self):
+        return True if isinstance(self.target, ClientType) else super().is_set()
 
     # for server
     def remote_set(self, *args, **xargs):

@@ -174,7 +174,7 @@ class NotificationMixin(TrayMixin, KeyBinding, PowerControlMixin, TargetApp):
 
     def show_notification_on_feature_change(self, f_id, value): # bound to target
         f = self.target.features[f_id]
-        if f._prev_val is not None and f.isset(): self.show_notification(f_id)
+        if f._prev_val is not None and f.is_set(): self.show_notification(f_id)
 
     def on_scroll_up(self, *args, **xargs):
         self.show_notification(config.tray_feature)

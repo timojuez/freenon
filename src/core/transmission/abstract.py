@@ -149,7 +149,7 @@ class AbstractServer(ServerType, AbstractTarget):
         if called_features:
             # data is a request
             for f in called_features:
-                if f.isset(): f.resend()
+                if f.is_set(): f.resend()
                 else: self.poll_feature(f)
         else:
             # data is a command
@@ -209,7 +209,7 @@ class _PreloadMixin:
             except StopIteration:
                 self._preload_features_iter = None
                 break
-            if (f := self.features.get(f_id)) and not f.isset():
+            if (f := self.features.get(f_id)) and not f.is_set():
                 try: f.async_poll()
                 except ConnectionError: break
 
@@ -410,6 +410,6 @@ class Fallback(features.OfflineFeatureMixin, features.SelectFeature):
 class Name(features.OfflineFeatureMixin, features.SelectFeature):
     
     def get(self): return self.target.Scheme.get_title()
-    def isset(self): return True
+    def is_set(self): return True
     def unset(self): pass
 
