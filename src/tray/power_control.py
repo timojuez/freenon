@@ -158,9 +158,16 @@ class PowerOffMixin:
             not source or not config["target"]["source"] or config["target"]["source"] == source.get())
 
     def poweroff(self):
-        if config["power_control"]["power_off_on_shutdown"]: self._poweroff()
+        """ on suspend/shutdown """
+        if not config["power_control"]["power_off_on_shutdown"]: return
+        power = self.target.features.get(config.power)
+        source = self.target.features.get(config.source)
+        try:
+            if self._can_poweroff(power, source): power.remote_set(False)
+        except ConnectionError: pass
 
     def _poweroff(self):
+        """ called by idle notification """
         requires = [config.power]
         if config.source in self.target.features: requires.append(config.source)
         self.target.schedule(
