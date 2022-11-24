@@ -145,9 +145,11 @@ class NotificationMixin(TrayMixin, KeyBinding, PowerControlMixin, TargetApp):
         if not f_id: return
         if f_id not in [resolve_feature_id(f_id) for f_id in config["notifications"]["blacklist"]]:
             n = self._notifications.get(f_id)
-            if not n:
+            if f_id not in self.target.features:
                 self.general_n.update(f"{f_id} not available for {self.target.Scheme.get_title()}", APP_NAME)
                 self.general_n.show()
+            elif not n:
+                pass # type not supported
             elif not self.target.connected:
                 self.general_n.update("Connecting ...", APP_NAME)
                 self.general_n.show()
