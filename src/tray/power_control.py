@@ -1,3 +1,4 @@
+import traceback
 from threading import Timer, Lock
 from ..core.util import log_call
 from ..core.target_controller import TargetController
@@ -80,7 +81,8 @@ class PowerOnMixin:
     def poweron(self):
         try:
             if (source := self.target.features.get(config.source)) and config["target"]["source"]:
-                source.remote_set(config["target"]["source"])
+                try: source.remote_set(config["target"]["source"])
+                except ValueError: traceback.print_exc()
             if power := self.target.features.get(config.power): power.remote_set(True)
         except ConnectionError: pass
 
