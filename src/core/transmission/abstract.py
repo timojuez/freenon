@@ -3,7 +3,7 @@ The classes AbstractClient and SocketClient help you to stay synchronised with
 remote values. A client supports features. See features.py.
 """
 
-import sys, re
+import sys, re, traceback
 from abc import ABCMeta
 from urllib.parse import parse_qsl
 from datetime import datetime, timedelta
@@ -70,7 +70,8 @@ class AbstractTarget(Bindable, AbstractMainloopManager):
     def mainloop_hook(self):
         super().mainloop_hook()
         while self._scheduled:
-            self._scheduled.pop()()
+            try: self._scheduled.pop()()
+            except: traceback.print_exc()
         for p in self._pending: p.check_expiration()
 
     @log_call
