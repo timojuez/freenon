@@ -192,26 +192,37 @@ class GroupedSet:
 class _PreloadMixin:
     preload_features = GroupedSet() # feature ids to be polled constantly when not set
     _preload_features_iter = None
+    _preload_iteration_completed = False
+    _preload_timeout = None
     _send_count = 0
 
     def __init__(self, *args, **xargs):
         super().__init__(*args, **xargs)
         self.preload_features = GroupedSet(self.preload_features)
 
-    def on_disconnected(self):
-        super().on_disconnected()
+    def on_connect(self):
+        super().on_connect()
+        self._preload_iteration_completed = False
         self._preload_features_iter = None
 
     def mainloop_hook(self):
         super().mainloop_hook()
         if not self.connected: return
+        if not self._preload_iteration_completed:
+            self._preload(10)
+        else:
+            if self._preload_timeout and self._preload_timeout > datetime.now(): return
+            self._preload_timeout = datetime.now()+timedelta(seconds=1)
+            self._preload(2)
+
+    def _preload(self, max_polls):
         if not self._preload_features_iter: self._preload_features_iter = iter(self.preload_features)
         self._send_count = 0
-        max_polls = 10
         for _ in range(max_polls*100):
             try: f_id = next(self._preload_features_iter)
             except StopIteration:
                 self._preload_features_iter = None
+                self._preload_iteration_completed = True
                 break
             if (f := self.features.get(f_id)) and not f.is_set():
                 try: f.async_poll()
