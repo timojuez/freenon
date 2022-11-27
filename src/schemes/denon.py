@@ -163,6 +163,14 @@ class Denon(SocketScheme):
             port = 23 # TODO
             return cls.new_client(host, port, *args, **xargs)
 
+    def on_receive_feature_value(self, f, value):
+        if isinstance(self, ClientType): return super().on_receive_feature_value(f, value)
+        def func(device_power):
+            if (f != device_power and not issubclass(type(f), _ZonePowerFeature)
+                and device_power.get() == False): return
+            super(Denon, self).on_receive_feature_value(f, value)
+        self.schedule(func, requires=(DevicePower.id,))
+
     def query(self, cmd, matches=None):
         """
         Send command to target
