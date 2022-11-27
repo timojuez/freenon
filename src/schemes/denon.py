@@ -151,7 +151,11 @@ Category = type("Category", tuple(), dict(
 class Denon(SocketScheme):
     description = "Denon/Marantz AVR compatible (tested with Denon X1400H)"
     _pulse = "CV?" # workaround for denon to retrieve CV?
-    
+
+    def __init__(self, *args, **xargs):
+        self._power_features = []
+        super().__init__(*args, **xargs)
+
     @classmethod
     def new_client_by_ssdp(cls, response, *args, **xargs):
         if "denon" in response.st.lower() or "marantz" in response.st.lower():
@@ -402,12 +406,38 @@ class SurroundAtmosSpeakerConfig(_SpeakerConfig): #undocumented
 class SubwooferSpeakerConfig(_SpeakerConfig): #undocumented
     function = "SSSPCSWF "
     translation = {"YES":"Yes","NO":"No"}
-    
+
+class _ZonePowerFeature:
+
+    def __init__(self, *args, **xargs):
+        super().__init__(*args, **xargs)
+        self.target._power_features.append(self.id)
+
+    def on_change(self, val):
+        super().on_change(val)
+        if not isinstance(self.target, ServerType): return
+        def func(*power_features):
+            self.target.features.device_power.set(any([f.get() for f in power_features]))
+        self.target.schedule(func, requires=self.target._power_features)
+
+
 @Denon.add_feature
 class DevicePower(BoolFeature):
     category = Category.GENERAL
     function = "PW"
     translation = {"ON":True,"STANDBY":False}
+
+    def on_change(self, val):
+        super().on_change(val)
+        if not isinstance(self.target, ServerType): return
+        def func(*power_features):
+            if val == True:
+                if not any([f.get() for f in power_features]) and len(power_features) >= 1:
+                    power_features[0].set(True)
+            else:
+                for f in power_features: f.set(False)
+        self.target.schedule(func, requires=self.target._power_features)
+
 
 @Denon.add_feature
 class Muted(BoolFeature):
@@ -491,7 +521,7 @@ for code, f_id, name in SPEAKERS:
 
 
 @Denon.add_feature
-class MainZonePower(BoolFeature):
+class MainZonePower(_ZonePowerFeature, BoolFeature):
     id = "power"
     category = Category.GENERAL
     function = "ZM"
@@ -1193,7 +1223,7 @@ for zone in ZONES:
         function = "Z%s"%zone
         
     @Denon.add_feature
-    class ZPower(Zone, BoolFeature):
+    class ZPower(Zone, _ZonePowerFeature, BoolFeature):
         name = "Zone %s Power"%zone
         id = "zone%s_power"%zone
         function = "Z%s"%zone
