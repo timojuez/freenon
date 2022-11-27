@@ -1159,9 +1159,9 @@ for cat_code, cat_id, cat_name, l in EQ_OPTIONS:
                 
                 def update(self, val, cat_name=cat_name, bound=bound):
                     if isinstance(self.target, ServerType): return
-                    isset = self._channels.is_set() and self._channels.get() == cat_name \
+                    is_set = self._channels.is_set() and self._channels.get() == cat_name \
                         and self._speaker_eq.is_set()
-                    super().set(self._speaker_eq.get()[bound]) if isset else self.unset()
+                    super().set(self._speaker_eq.get()[bound]) if is_set else self.unset()
                 
                 def set(self, value, bound=bound): self._speaker_eq.set_value(bound, self.type(value))
 
