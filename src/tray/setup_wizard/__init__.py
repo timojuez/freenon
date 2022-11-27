@@ -117,6 +117,7 @@ class SourceMixin(InputsMixin):
     def on_window_apply(self, *args):
         super().on_window_apply(*args)
         config["target"]["source"] = self.source_selector.get_active()
+        config.save()
 
 
 class AutostartMixin:
