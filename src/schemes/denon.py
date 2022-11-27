@@ -427,7 +427,7 @@ class SourceNames(MultipartFeatureMixin): #undocumented
     TERMINATOR = " END"
     function = "SSFUN"
     call = "SSFUN ?"
-    default_value = {code: name for code, f_id, name in SOURCES}
+    default_value = {code: "% -12s"%name for code, f_id, name in SOURCES}
     def remote_set(self, *args, **xargs): raise RuntimeError("Cannot set value! Set source instead")
     def to_parts(self, d): return [" ".join(e) for e in d.items()]
     def from_parts(self, l): return dict([line.split(" ",1) for line in l])
@@ -444,14 +444,15 @@ class Source(SelectFeature):
         self.target.features.source_names.bind(self.on_source_names_change)
 
     def on_source_names_change(self, source_names):
+        strip = lambda d: {k:v.strip() for k, v in d.items()}
         with self._lock:
             if self.is_set():
                 old = self.serialize(self._val)
-                self.translation.update(source_names)
+                self.translation.update(strip(source_names))
                 self._val = self.unserialize(old)
                 self.on_change(self._val) # cause listeners to update from self.translation
             else:
-                self.translation.update(source_names)
+                self.translation.update(strip(source_names))
         
     def consume(self, data):
         self.target.schedule(lambda *_: super(Source, self).consume(data), requires=("source_names",))
