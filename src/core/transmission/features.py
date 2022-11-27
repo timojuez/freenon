@@ -1,7 +1,7 @@
 import sys, traceback, re, math
 from contextlib import suppress
 from decimal import Decimal
-from threading import Event, Lock, Timer, Thread
+from threading import Event, Lock, RLock, Timer, Thread
 from datetime import datetime, timedelta
 from ..util import call_sequence, Bindable, AttrDict
 from .types import ClientType, ServerType
@@ -134,7 +134,7 @@ class AsyncFeature(FeatureInterface, Bindable, metaclass=_MetaFeature):
     _prev_val = None
     _block_on_remote_set = None
     _block_on_remote_set_resetter = None
-    _lock = Lock
+    _lock = RLock
     _event_on_set = Event
 
     def __init__(self, target):
