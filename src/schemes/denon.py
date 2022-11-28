@@ -163,14 +163,6 @@ class Denon(SocketScheme):
             port = 23 # TODO
             return cls.new_client(host, port, *args, **xargs)
 
-    def on_receive_feature_value(self, f, value):
-        if isinstance(self, ClientType): return super().on_receive_feature_value(f, value)
-        def func(device_power):
-            if (f != device_power and not issubclass(type(f), _ZonePowerFeature)
-                and device_power.get() == False): return
-            super(Denon, self).on_receive_feature_value(f, value)
-        self.schedule(func, requires=(DevicePower.id,))
-
     def query(self, cmd, matches=None):
         """
         Send command to target
@@ -191,7 +183,7 @@ class Denon(SocketScheme):
     def send(self, cmd): super().send(cmd.upper() if cmd == cmd.lower() else cmd)
 
 
-class DenonFeature:
+class _DenonFeature:
     """ Handles Denon format "@function@value" """
     
     function = None #str, Denon function command
@@ -210,8 +202,19 @@ class DenonFeature:
         
     def matches(self, cmd):
         return cmd.startswith(self.function) #and " " not in cmd.replace(self.function,"",1)
-    
-        
+
+
+class DenonFeature(_DenonFeature):
+    """ Forbid consume() when power is off """
+
+    def consume(self, data):
+        if isinstance(self.target, ClientType): return super().consume(data)
+        def func(device_power):
+            if device_power.get() == True:
+                super(DenonFeature, self).consume(data)
+        self.target.schedule(func, requires=(DevicePower.id,))
+
+
 class _Translation:
     translation = {} #{return_string:value} unserialize return_string to value / serialize vice versa
 
@@ -221,6 +224,10 @@ class _Translation:
         
     def serialize_val(self, val):
         return {val:key for key,val in self.translation.items()}.get(val,val)
+
+
+class _Bool(_Translation):
+    translation = {"ON":True, "OFF":False}
 
 
 ######### Data Types
@@ -265,10 +272,23 @@ class IntFeature(NumericFeature, features.IntFeature):
     def unserialize_val(self, val):
         return int(val) if val.isnumeric() else super().unserialize_val(val)
 
+class PowerFeature(_Bool, _DenonFeature, features.BoolFeature): pass
 
-class BoolFeature(_Translation, DenonFeature, features.BoolFeature):
-    translation = {"ON":True,"OFF":False}
-    
+class ZonePowerFeature(PowerFeature):
+
+    def __init__(self, *args, **xargs):
+        super().__init__(*args, **xargs)
+        self.target._power_features.append(self.id)
+
+    def on_change(self, val):
+        super().on_change(val)
+        if not isinstance(self.target, ServerType): return
+        def func(*power_features):
+            self.target.features.device_power.set(any([f.get() for f in power_features]))
+        self.target.schedule(func, requires=self.target._power_features)
+
+
+class BoolFeature(_Bool, DenonFeature, features.BoolFeature): pass
 
 class RelativeInt(IntFeature):
     min = -6
@@ -415,22 +435,8 @@ class SubwooferSpeakerConfig(_SpeakerConfig): #undocumented
     function = "SSSPCSWF "
     translation = {"YES":"Yes","NO":"No"}
 
-class _ZonePowerFeature:
-
-    def __init__(self, *args, **xargs):
-        super().__init__(*args, **xargs)
-        self.target._power_features.append(self.id)
-
-    def on_change(self, val):
-        super().on_change(val)
-        if not isinstance(self.target, ServerType): return
-        def func(*power_features):
-            self.target.features.device_power.set(any([f.get() for f in power_features]))
-        self.target.schedule(func, requires=self.target._power_features)
-
-
 @Denon.add_feature
-class DevicePower(BoolFeature):
+class DevicePower(PowerFeature):
     category = Category.GENERAL
     function = "PW"
     translation = {"ON":True,"STANDBY":False}
@@ -529,7 +535,7 @@ for code, f_id, name in SPEAKERS:
 
 
 @Denon.add_feature
-class MainZonePower(_ZonePowerFeature, BoolFeature):
+class MainZonePower(ZonePowerFeature):
     id = "power"
     category = Category.GENERAL
     function = "ZM"
@@ -1231,7 +1237,7 @@ for zone in ZONES:
         function = "Z%s"%zone
         
     @Denon.add_feature
-    class ZPower(Zone, _ZonePowerFeature, BoolFeature):
+    class ZPower(Zone, ZonePowerFeature):
         name = "Zone %s Power"%zone
         id = "zone%s_power"%zone
         function = "Z%s"%zone
