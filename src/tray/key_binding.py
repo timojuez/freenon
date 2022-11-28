@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import time, sys, tempfile, os, traceback
+from gi.repository import Gdk
 from threading import Thread, Lock, Event
 from decimal import Decimal
 from contextlib import suppress
@@ -15,6 +16,18 @@ if LINUX: from ..core.util.x11_grab import XGrab
 def sleep():
     delay = config["hotkeys"]["mouse_delay"]
     if delay: time.sleep(delay/1000)
+
+
+def get_screen_size(display):
+    mon_geoms = [
+        display.get_monitor(i).get_geometry()
+        for i in range(display.get_n_monitors())
+    ]
+    x0 = min(r.x            for r in mon_geoms)
+    y0 = min(r.y            for r in mon_geoms)
+    x1 = max(r.x + r.width  for r in mon_geoms)
+    y1 = max(r.y + r.height for r in mon_geoms)
+    return x1 - x0, y1 - y0
 
 
 class KeyBinding(TargetApp):
@@ -73,7 +86,9 @@ class KeyBinding(TargetApp):
     def on_activated_mouse_move(self, x, y):
         if (f := self.target.features.get(config.gesture_feature)) is None: return
         if self._position_ref is None: return
-        new_value = self._position_ref-int((y-self._y_ref)*config["hotkeys"]["mouse"][0]["sensitivity"])
+        screen_height = get_screen_size(Gdk.Display.get_default())[1]
+        new_value = self._position_ref-int((y-self._y_ref)/screen_height
+            *config["hotkeys"]["mouse"][0]["sensitivity"])
         if new_value == self._new_value: return
         try: max_ = min(f.max, f.get()+Decimal(config["hotkeys"]["mouse"][0]["max_step"]))
         except ConnectionError: return

@@ -55,7 +55,7 @@ hotkeys:
     mouse:
       - button: 9
         feature: '@volume_id'
-        sensitivity: 0.06
+        sensitivity: 60
         max_step: 8
     # Wait @mouse_delay milliseconds after each volume change
     mouse_delay: 100
