@@ -12,7 +12,6 @@ from .. import NAME
 
 
 APP_NAME = f"{NAME} Tray Control"
-Notify.init(APP_NAME)
 autostart = Autostart(__package__, __package__, terminal=False)
 
 
@@ -30,12 +29,15 @@ class _TargetApp(TargetController, AbstractContextManager):
         super().__init__(self.target, *args, **xargs)
 
     def __enter__(self):
+        Notify.init(APP_NAME)
         self.target.__enter__()
         return super().__enter__()
 
     def __exit__(self, *args, **xargs):
         try: super().__exit__(*args, **xargs)
-        finally: self.target.__exit__(*args, **xargs)
+        finally:
+            self.target.__exit__(*args, **xargs)
+            Notify.uninit()
 
     def main_quit(self):
         """ called by SystemEvents """
