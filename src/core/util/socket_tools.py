@@ -56,7 +56,10 @@ class Base(AbstractMainloopManager):
 
     def trigger_mainloop(self):
         if self._triggering.acquire(blocking=False):
-            self._sockets["write"].send(b"\x00")
+            try: self._sockets["write"].sendall(b"\x00")
+            except:
+                self._triggering.release()
+                raise
 
     def mainloop_quit(self):
         super().mainloop_quit()
