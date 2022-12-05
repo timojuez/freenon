@@ -165,7 +165,7 @@ class AsyncFeature(FeatureInterface, Bindable, metaclass=_MetaFeature):
     
     def remote_set(self, value, force=False):
         """ request update to @value on other side """
-        assert(value is not None)
+        if value is None: raise ValueError("Value may not be None")
         if not force and not isinstance(value, self.type):
             print("WARNING: Value %s is not of type %s."%(repr(value),self.type.__name__), file=sys.stderr)
         serialized = self.serialize(self.type(value))
