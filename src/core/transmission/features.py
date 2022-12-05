@@ -212,7 +212,8 @@ class AsyncFeature(FeatureInterface, Bindable, metaclass=_MetaFeature):
         with self._lock:
             if not self.is_set(): self._set(self.default_value)
     
-    def resend(self): return AsyncFeature.remote_set(self, self._val, force=True)
+    def resend(self):
+        self._send(self.serialize(self.get()))
     
     def consume(self, data):
         """ unserialize and apply @data to this object """
