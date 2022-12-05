@@ -352,13 +352,16 @@ class MultipartFeatureMixin(features.MultipartFeatureMixin, DenonFeature, featur
 
 ######### Features implementation (see Denon CLI protocol)
 
+class BlockTerminator(features.PresetValueMixin, DenonFeature, features.Feature):
+    function = ""
+    value = "END"
+    def matches(self, data): super().matches(data) and self.unserialize(data) == self.value
+
+
 @Denon.add_feature(overwrite=True)
 class Fallback(Denon.features.fallback):
     """ hide known messages from AVR """
     name = Denon.features.fallback.name
-
-    def consume(self, data):
-        if not data.endswith("END"): return super().consume(data)
 
 
 @Denon.add_feature
@@ -518,20 +521,32 @@ class Name(features.ServerToClientFeatureMixin, SelectFeature): #undocumented
 
 for code, f_id, name in SPEAKERS:
     @Denon.add_feature
-    class ChannelVolume(RelativeDecimal):
-        name = f"{name} Volume"
-        id = f"{f_id}_volume"
-        category = Category.VOLUME
-        call = "CV?"
-        function = f"CV{code} "
-
-    @Denon.add_feature
     class SpeakerLevel(RelativeDecimal): #undocumented
         name = f"{name} Level"
         id = f"{f_id}_level"
         category = Category.SPEAKERS
         call = "SSLEV ?"
         function = f"SSLEV{code} "
+
+
+@Denon.add_feature
+class ChannelVolumeBlock(features.FeatureBlock, DenonFeature, features.Feature):
+    function = "CV"
+    category = Category.VOLUME
+
+
+for code, f_id, name in SPEAKERS:
+    @Denon.add_feature
+    class ChannelVolume(ChannelVolumeBlock.Subfeature, RelativeDecimal):
+        name = f"{name} Volume"
+        id = f"{f_id}_volume"
+        category = Category.VOLUME
+        function = f"{code} "
+
+
+@Denon.add_feature
+class ChannelVolumeBlockTerminator(ChannelVolumeBlock.Subfeature, BlockTerminator):
+    category = Category.VOLUME
 
 
 @Denon.add_feature
