@@ -1179,15 +1179,20 @@ class EqualizerChannels(Equalizer, SelectFeature):
     translation = {cat_code: cat_name for cat_code, cat_id, cat_name, l in EQ_OPTIONS}
 
 for cat_code, cat_id, cat_name, l in EQ_OPTIONS:
+    @Denon.add_feature
+    class SpeakerEqBlock(Equalizer, FeatureBlock):
+        id = cat_id
+        function = f"SSAEQ{cat_code}"
+        call = f"SSAEQ{cat_code} ?"
+
     for code, sp_id, name in l:
 
         @Denon.add_feature
-        class SpeakerEq(Equalizer, DenonFeature, features.Feature): #undocumented
+        class SpeakerEq(SpeakerEqBlock.Subfeature, Equalizer, DenonFeature, features.Feature): #undocumented
             name = f"Eq {name}"
             type = dict
             id = f"eq_{cat_id}_{sp_id}"
-            function = f"SSAEQ{cat_code}{code} "
-            call = f"SSAEQ{cat_code} ?"
+            function = f"{code} "
             dummy_value = {i:0 for i in range(9)}
             
             def serialize_val(self, d): return ":".join(["%d"%(v*10+500) for v in d.values()])
@@ -1232,6 +1237,12 @@ for cat_code, cat_id, cat_name, l in EQ_OPTIONS:
                 def async_poll(self, *args, **xargs):
                     if not self._channels.is_set(): self._channels.async_poll(*args, **xargs)
                     if not self._speaker_eq.is_set(): self._speaker_eq.async_poll(*args, **xargs)
+
+
+    if len(l) > 1:
+        @Denon.add_feature
+        class SpeakerEqBlockTerminator(SpeakerEqBlock.Subfeature, Equalizer, BlockTerminator):
+            id = f"{cat_id}_end"
 
 
 @Denon.add_feature
