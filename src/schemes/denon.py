@@ -1070,19 +1070,31 @@ for code, f_id, name in SOURCES:
         translation = {"USE":True, "DEL":False}
 
 
+@Denon.add_feature
+class SourceVolumeLevelBlock(FeatureBlock):
+    function = f"SSSLV"
+    call = f"SSSLV ?"
+    category = Category.INPUT
+
+
 for code, f_id, name in SOURCES:
     @Denon.add_feature
-    class SourceVolumeLevel(RelativeInt): #undocumented
+    class SourceVolumeLevel(SourceVolumeLevelBlock.Subfeature, RelativeInt): #undocumented
         name = f"{name} Volume Level"
         id = f"{f_id}_volume_level"
         category = Category.INPUT
         min = -12
         max = 12
-        call = "SSSLV ?"
-        function = f"SSSLV{code} "
+        function = f"{code} "
         def remote_set(self, *args, **xargs):
             super().remote_set(*args, **xargs)
             self.async_poll(force=True) #Denon workaround: missing echo
+
+
+@Denon.add_feature
+class SourceVolumeLevelBlockTerminator(SourceVolumeLevelBlock.Subfeature, BlockTerminator):
+    value = " END"
+    category = Category.INPUT
 
 
 @Denon.add_feature
