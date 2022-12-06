@@ -942,32 +942,43 @@ class Restorer(SelectFeature):
 class FrontSpeaker(SelectFeature):
     function = "PSFRONT"
     translation = {" SPA":"A"," SPB":"B"," A+B":"A+B"}
-    
+
 @Denon.add_feature
-class Crossover(SelectFeature): #undocumented
+class CrossoverBlock(FeatureBlock):
+    function = "SSCFR"
+    call = "SSCFR ?"
+    category = Category.SPEAKERS
+
+@Denon.add_feature
+class Crossover(CrossoverBlock.Subfeature, SelectFeature): #undocumented
     name = "Crossover Speaker Select"
     category = Category.SPEAKERS
-    function = "SSCFR "
+    function = " "
     translation = {"ALL":"All","IDV":"Individual"}
     def matches(self, data): return super().matches(data) and "END" not in data
 
-class _Crossover(SelectFeature): #undocumented
+class _Crossover(CrossoverBlock.Subfeature, SelectFeature): #undocumented
     category = Category.SPEAKERS
-    call = "SSCFR ?"
     translation = {x:"%d Hz"%int(x)
         for x in ["040","060","080","090","100","110","120","150","200","250"]}
 
 @Denon.add_feature
 class CrossoverAll(_Crossover): #undocumented
     name = "Crossover (all)"
-    function = "SSCFRALL "
+    function = "ALL "
 
 for code, f_id, name in SPEAKER_PAIRS:
     @Denon.add_feature
     class CrossoverSpeaker(_Crossover): #undocumented
         name = f"Crossover ({name})"
         id = f"crossover_{f_id}"
-        function = f"SSCFR{code} "
+        function = f"{code} "
+
+@Denon.add_feature
+class CrossoverBlockTerminator(CrossoverBlock.Subfeature, BlockTerminator):
+    value = " END"
+    category = Category.SPEAKERS
+
 
 @Denon.add_feature
 class SubwooferMode(SelectFeature): #undocumented
