@@ -521,14 +521,26 @@ class Name(features.ServerToClientFeatureMixin, SelectFeature): #undocumented
     function = "NSFRN "
 
 
+@Denon.add_feature
+class SpeakerLevelBlock(FeatureBlock):
+    function = "SSLEV"
+    call = "SSLEV ?"
+    category = Category.SPEAKERS
+
+
 for code, f_id, name in SPEAKERS:
     @Denon.add_feature
-    class SpeakerLevel(RelativeDecimal): #undocumented
+    class SpeakerLevel(SpeakerLevelBlock.Subfeature, RelativeDecimal): #undocumented
         name = f"{name} Level"
         id = f"{f_id}_level"
         category = Category.SPEAKERS
-        call = "SSLEV ?"
-        function = f"SSLEV{code} "
+        function = f"{code} "
+
+
+@Denon.add_feature
+class SpeakerLevelBlockTerminator(SpeakerLevelBlock.Subfeature, BlockTerminator):
+    value = " END"
+    category = Category.SPEAKERS
 
 
 @Denon.add_feature
