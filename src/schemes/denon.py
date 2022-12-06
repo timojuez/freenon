@@ -336,7 +336,6 @@ class LooseBoolFeature(BoolFeature):
         if val == True: self.target.send(self.call) # make target send the nonbool value TODO: only once
 
 
-
 class MultipartFeatureMixin(features.MultipartFeatureMixin, DenonFeature, features.Feature):
     TERMINATOR = "END"
     def to_parts(self, val): raise NotImplementedError()
@@ -348,6 +347,9 @@ class MultipartFeatureMixin(features.MultipartFeatureMixin, DenonFeature, featur
     def unserialize(self, l):
         return self.from_parts([super(MultipartFeatureMixin, self).unserialize(e)
             for e in l[:-1]])
+
+
+class FeatureBlock(features.FeatureBlock, DenonFeature, features.Feature): pass
 
 
 ######### Features implementation (see Denon CLI protocol)
@@ -530,7 +532,7 @@ for code, f_id, name in SPEAKERS:
 
 
 @Denon.add_feature
-class ChannelVolumeBlock(features.FeatureBlock, DenonFeature, features.Feature):
+class ChannelVolumeBlock(FeatureBlock):
     function = "CV"
     category = Category.VOLUME
 
