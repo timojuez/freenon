@@ -1082,15 +1082,25 @@ class EcoMode(SelectFeature): #undocumented
     translation = {"AUTO":"Auto","ON":"On","OFF":"Off"}
 
 
+@Denon.add_feature
+class InputVisibilityBlock(FeatureBlock):
+    function = "SSSOD"
+    call = "SSSOD ?"
+
+
 for code, f_id, name in SOURCES:
     @Denon.add_feature
-    class InputVisibility(BoolFeature): #undocumented
+    class InputVisibility(InputVisibilityBlock.Subfeature, BoolFeature): #undocumented
         name = f"Enable {name} Input"
         id = f"enable_{f_id}"
         category = Category.INPUT
-        call = "SSSOD ?"
-        function = f"SSSOD{code} "
+        function = f"{code} "
         translation = {"USE":True, "DEL":False}
+
+
+@Denon.add_feature
+class InputVisibilityBlockTerminator(InputVisibilityBlock.Subfeature, BlockTerminator):
+    value = " END"
 
 
 @Denon.add_feature
