@@ -529,16 +529,16 @@ class SpeakerLevelBlock(FeatureBlock):
 
 
 for code, f_id, name in SPEAKERS:
-    @Denon.add_feature
-    class SpeakerLevel(SpeakerLevelBlock.Subfeature, RelativeDecimal): #undocumented
+    @Denon.add_feature(parent=SpeakerLevelBlock)
+    class SpeakerLevel(RelativeDecimal): #undocumented
         name = f"{name} Level"
         id = f"{f_id}_level"
         category = Category.SPEAKERS
         function = f"{code} "
 
 
-@Denon.add_feature
-class SpeakerLevelBlockTerminator(SpeakerLevelBlock.Subfeature, BlockTerminator):
+@Denon.add_feature(parent=SpeakerLevelBlock)
+class SpeakerLevelBlockTerminator(BlockTerminator):
     value = " END"
     category = Category.SPEAKERS
 
@@ -550,16 +550,16 @@ class ChannelVolumeBlock(FeatureBlock):
 
 
 for code, f_id, name in SPEAKERS:
-    @Denon.add_feature
-    class ChannelVolume(ChannelVolumeBlock.Subfeature, RelativeDecimal):
+    @Denon.add_feature(parent=ChannelVolumeBlock)
+    class ChannelVolume(RelativeDecimal):
         name = f"{name} Volume"
         id = f"{f_id}_volume"
         category = Category.VOLUME
         function = f"{code} "
 
 
-@Denon.add_feature
-class ChannelVolumeBlockTerminator(ChannelVolumeBlock.Subfeature, BlockTerminator):
+@Denon.add_feature(parent=ChannelVolumeBlock)
+class ChannelVolumeBlockTerminator(BlockTerminator):
     category = Category.VOLUME
 
 
@@ -949,33 +949,33 @@ class CrossoverBlock(FeatureBlock):
     call = "SSCFR ?"
     category = Category.SPEAKERS
 
-@Denon.add_feature
-class Crossover(CrossoverBlock.Subfeature, SelectFeature): #undocumented
+@Denon.add_feature(parent=CrossoverBlock)
+class Crossover(SelectFeature): #undocumented
     name = "Crossover Speaker Select"
     category = Category.SPEAKERS
     function = " "
     translation = {"ALL":"All","IDV":"Individual"}
     def matches(self, data): return super().matches(data) and "END" not in data
 
-class _Crossover(CrossoverBlock.Subfeature, SelectFeature): #undocumented
+class _Crossover(SelectFeature): #undocumented
     category = Category.SPEAKERS
     translation = {x:"%d Hz"%int(x)
         for x in ["040","060","080","090","100","110","120","150","200","250"]}
 
-@Denon.add_feature
+@Denon.add_feature(parent=CrossoverBlock)
 class CrossoverAll(_Crossover): #undocumented
     name = "Crossover (all)"
     function = "ALL "
 
 for code, f_id, name in SPEAKER_PAIRS:
-    @Denon.add_feature
+    @Denon.add_feature(parent=CrossoverBlock)
     class CrossoverSpeaker(_Crossover): #undocumented
         name = f"Crossover ({name})"
         id = f"crossover_{f_id}"
         function = f"{code} "
 
-@Denon.add_feature
-class CrossoverBlockTerminator(CrossoverBlock.Subfeature, BlockTerminator):
+@Denon.add_feature(parent=CrossoverBlock)
+class CrossoverBlockTerminator(BlockTerminator):
     value = " END"
     category = Category.SPEAKERS
 
@@ -1089,8 +1089,8 @@ class InputVisibilityBlock(FeatureBlock):
 
 
 for code, f_id, name in SOURCES:
-    @Denon.add_feature
-    class InputVisibility(InputVisibilityBlock.Subfeature, BoolFeature): #undocumented
+    @Denon.add_feature(parent=InputVisibilityBlock)
+    class InputVisibility(BoolFeature): #undocumented
         name = f"Enable {name} Input"
         id = f"enable_{f_id}"
         category = Category.INPUT
@@ -1098,8 +1098,8 @@ for code, f_id, name in SOURCES:
         translation = {"USE":True, "DEL":False}
 
 
-@Denon.add_feature
-class InputVisibilityBlockTerminator(InputVisibilityBlock.Subfeature, BlockTerminator):
+@Denon.add_feature(parent=InputVisibilityBlock)
+class InputVisibilityBlockTerminator(BlockTerminator):
     value = " END"
 
 
@@ -1111,8 +1111,8 @@ class SourceVolumeLevelBlock(FeatureBlock):
 
 
 for code, f_id, name in SOURCES:
-    @Denon.add_feature
-    class SourceVolumeLevel(SourceVolumeLevelBlock.Subfeature, RelativeInt): #undocumented
+    @Denon.add_feature(parent=SourceVolumeLevelBlock)
+    class SourceVolumeLevel(RelativeInt): #undocumented
         name = f"{name} Volume Level"
         id = f"{f_id}_volume_level"
         category = Category.INPUT
@@ -1124,8 +1124,8 @@ for code, f_id, name in SOURCES:
             self.async_poll(force=True) #Denon workaround: missing echo
 
 
-@Denon.add_feature
-class SourceVolumeLevelBlockTerminator(SourceVolumeLevelBlock.Subfeature, BlockTerminator):
+@Denon.add_feature(parent=SourceVolumeLevelBlock)
+class SourceVolumeLevelBlockTerminator(BlockTerminator):
     value = " END"
     category = Category.INPUT
 
@@ -1212,8 +1212,8 @@ sourceInputAssignBlocks = dict([create_source_input_assign_block(*args) for args
 
 for input_code, input_value_code, input_id, input_name in INPUTS:
     for source_code, source_id, source_name in SOURCES:
-        @Denon.add_feature
-        class SourceInputAssign(sourceInputAssignBlocks[input_id].Subfeature, SelectFeature):
+        @Denon.add_feature(parent=sourceInputAssignBlocks[input_id])
+        class SourceInputAssign(SelectFeature):
             name = f"{source_name} {input_name} Input"
             id = f"input_{source_id}_{input_id}"
             category = Category.INPUT
@@ -1223,8 +1223,8 @@ for input_code, input_value_code, input_id, input_name in INPUTS:
                 **{f"{input_value_code}{i}":f"{input_name} {i}" for i in range(7)}}
 
 for input_code, input_value_code, input_id, input_name in INPUTS:
-    @Denon.add_feature
-    class SourceInputAssignBlockTerminator(sourceInputAssignBlocks[input_id].Subfeature, BlockTerminator):
+    @Denon.add_feature(parent=sourceInputAssignBlocks[input_id])
+    class SourceInputAssignBlockTerminator(BlockTerminator):
         id = f"input_{input_id}_block_terminator"
         category = Category.INPUT
         value = " END"
@@ -1251,8 +1251,8 @@ for cat_code, cat_id, cat_name, l in EQ_OPTIONS:
 
     for code, sp_id, name in l:
 
-        @Denon.add_feature
-        class SpeakerEq(SpeakerEqBlock.Subfeature, Equalizer, DenonFeature, features.Feature): #undocumented
+        @Denon.add_feature(parent=SpeakerEqBlock)
+        class SpeakerEq(Equalizer, DenonFeature, features.Feature): #undocumented
             name = f"Eq {name}"
             type = dict
             id = f"eq_{cat_id}_{sp_id}"
@@ -1304,8 +1304,8 @@ for cat_code, cat_id, cat_name, l in EQ_OPTIONS:
 
 
     if len(l) > 1:
-        @Denon.add_feature
-        class SpeakerEqBlockTerminator(SpeakerEqBlock.Subfeature, Equalizer, BlockTerminator):
+        @Denon.add_feature(parent=SpeakerEqBlock)
+        class SpeakerEqBlockTerminator(Equalizer, BlockTerminator):
             id = f"{cat_id}_end"
 
 

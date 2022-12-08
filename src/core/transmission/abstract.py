@@ -341,7 +341,7 @@ class _AbstractSchemeMeta(ABCMeta):
         if args is None: args = getattr(cls.Server,"init_args_help",None)
         if args is not None: return ":".join((cls.scheme_id, *args))
 
-    def add_feature(cls, Feature=None, overwrite=False):
+    def add_feature(cls, Feature=None, parent=None, overwrite=False):
         """
         This is a decorator to be used on Feature class definitions that belong to the current class.
         @overwrite: If true, proceeds if a feature with same id already exists.
@@ -351,6 +351,36 @@ class _AbstractSchemeMeta(ABCMeta):
             class MyFeature(Feature): pass
         """
         def add(Feature):
+            if parent:
+                if cls.features.get(parent.id) != parent:
+                    raise ValueError(f"Parent {parent.id} does not exist in {cls}.")
+                class Feature(Feature):
+                    id = Feature.id
+                    name = Feature.name
+
+                    def __init__(self, *args, **xargs):
+                        super().__init__(*args, **xargs)
+                        self.parent = self.target.features[parent.id]
+                        self.parent.children.append(self.id)
+
+                    def matches(self, data):
+                        return self.parent.matches(data) and super().matches(self.parent.unserialize(data))
+
+                    def poll_on_client(self, *args, **xargs):
+                        self.parent.poll_on_client(*args, **xargs)
+
+                    def _send(self, *args, **xargs):
+                        if issubclass(self.target.__class__, ServerType):
+                            self.parent.resend()
+                        else:
+                            super()._send(*args, **xargs)
+
+                    def serialize(self, value):
+                        return self.parent.serialize(super().serialize(value))
+
+                    def unserialize(self, data):
+                        return super().unserialize(self.parent.unserialize(data))
+
             if not issubclass(Feature, features.Feature):
                 raise TypeError(f"Feature must be of type {features.Feature}")
             if Feature.id.startswith("_"): raise KeyError("Feature.id may not start with '_'")

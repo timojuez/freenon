@@ -145,6 +145,7 @@ class AsyncFeature(FeatureInterface, Bindable, metaclass=_MetaFeature):
         self.target = target
         self._lock = self._lock()
         self._event_on_set = self._event_on_set()
+        self.children = []
         target.features[self.id] = self
         
     name = property(lambda self:self.__class__.__name__)
@@ -427,45 +428,15 @@ class FeatureBlock:
     """
     A feature block returns a list of features when polled on server.
     Handles CVa\r CVb\r CVc\r CVEND on Denon.
-    The feature block must be added to target and the subfeatures must inherit from FeatureBlock.Subfeature.
+    Subfeatures must be added to the Scheme as Scheme.add_feature(parent=FeatureBlock).
     """
-
-    def __init__(self, *args, **xargs):
-        super().__init__(*args, **xargs)
-        self.Subfeature.parent_id = self.id
-        self._subfeatures = []
 
     def resend(self):
         def func(*features):
             for f in features: self.target.send(f.serialize(f.get()))
-        self.target.schedule(func, requires=self._subfeatures)
+        self.target.schedule(func, requires=self.children)
 
     def is_set(self): return True
     def consume(self, *args, **xargs): pass
     def remote_set(self, *args, **xargs): raise ValueError("Cannot set value!")
-
-    class Subfeature:
-
-        def __init__(self, *args, **xargs):
-            super().__init__(*args, **xargs)
-            self.parent = self.target.features[self.parent_id]
-            self.parent._subfeatures.append(self.id)
-
-        def matches(self, data):
-            return self.parent.matches(data) and super().matches(self.parent.unserialize(data))
-
-        def poll_on_client(self, *args, **xargs):
-            self.parent.poll_on_client(*args, **xargs)
-
-        def _send(self, *args, **xargs):
-            if issubclass(self.target.__class__, ServerType):
-                self.parent.resend()
-            else:
-                super()._send(*args, **xargs)
-
-        def serialize(self, value):
-            return self.parent.serialize(super().serialize(value))
-
-        def unserialize(self, data):
-            return super().unserialize(self.parent.unserialize(data))
 
