@@ -27,7 +27,6 @@ class AbstractTarget(Bindable, AbstractMainloopManager):
         self.verbose = verbose
         self.update_uri()
         self.features = self.features.__class__()
-        self._scheduled = []
         self._pending = []
         # apply @features to self
         for F in self.Scheme.features.values(): F(self)
@@ -63,16 +62,13 @@ class AbstractTarget(Bindable, AbstractMainloopManager):
                 print("[%s] Warning: Target does not provide feature required by `%s`: %s"
                 %(self.__class__.__name__, func.__name__, e), file=sys.stderr)
             return
-        call = features.FunctionCall(self, func, args, kwargs, features_)
-        self._scheduled.append(call.try_call)
-        return call
+        return features.FunctionCall(self, func, args, kwargs, features_)
 
     def mainloop_hook(self):
         super().mainloop_hook()
-        while self._scheduled:
-            try: self._scheduled.pop()()
-            except: traceback.print_exc()
-        for p in self._pending: p.check_expiration()
+        for p in self._pending.copy():
+            p.check_expiration()
+            p.try_call()
 
     @log_call
     def on_feature_change(self, f_id, value):
@@ -243,7 +239,6 @@ class _FeaturesMixin:
 
     def on_disconnected(self):
         super().on_disconnected()
-        self._scheduled.clear()
         self._pending.clear()
         self._poll_timeout.clear()
         for f in self.features.values(): f.unset()
