@@ -1200,17 +1200,36 @@ class MuteMode(SelectFeature):
     translation = {"MUT":"Full", "040":"-40 dB", "060":"-20 dB"}
 
 
-for source_code, source_id, source_name in SOURCES:
-    for input_code, input_value_code, input_id, input_name in INPUTS:
+def create_source_input_assign_block(input_code, input_value_code, input_id, input_name):
+    @Denon.add_feature
+    class SourceInputAssignBlock(FeatureBlock):
+        id = f"input_{input_id}_block"
+        category = Category.INPUT
+        function = f"SS{input_code}"
+    return input_id, SourceInputAssignBlock
+
+sourceInputAssignBlocks = dict([create_source_input_assign_block(*args) for args in INPUTS])
+
+for input_code, input_value_code, input_id, input_name in INPUTS:
+    for source_code, source_id, source_name in SOURCES:
         @Denon.add_feature
-        class SourceInputAssign(SelectFeature):
+        class SourceInputAssign(sourceInputAssignBlocks[input_id].Subfeature, SelectFeature):
             name = f"{source_name} {input_name} Input"
             id = f"input_{source_id}_{input_id}"
             category = Category.INPUT
-            function = f"SS{input_code}{source_code} "
+            function = f"{source_code} "
             call = f"SS{input_code} ?"
             translation = {"OFF":"None", "FRO":"Front",
                 **{f"{input_value_code}{i}":f"{input_name} {i}" for i in range(7)}}
+
+for input_code, input_value_code, input_id, input_name in INPUTS:
+    @Denon.add_feature
+    class SourceInputAssignBlockTerminator(sourceInputAssignBlocks[input_id].Subfeature, BlockTerminator):
+        id = f"input_{input_id}_block_terminator"
+        category = Category.INPUT
+        value = " END"
+
+del sourceInputAssignBlocks
 
 
 class Equalizer: category = Category.EQUALIZER
