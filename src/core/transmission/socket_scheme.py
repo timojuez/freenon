@@ -46,8 +46,8 @@ class _IO(socket_tools.Base):
         return (b"%s%s"%(data.encode("ascii"), self._break))
 
     def schedule(self, *args, **xargs):
-        super().schedule(*args, **xargs)
-        self.trigger_mainloop()
+        try: return super().schedule(*args, **xargs)
+        finally: self.trigger_mainloop()
 
     def handle_uri_path(self, *args, **xargs):
         super().handle_uri_path(*args, **xargs)
