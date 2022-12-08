@@ -350,7 +350,7 @@ class _AbstractSchemeMeta(ABCMeta):
             @AbstractClient.add_feature
             class MyFeature(Feature): pass
         """
-        def add(Feature, overwrite=overwrite):
+        def add(Feature):
             if not issubclass(Feature, features.Feature):
                 raise TypeError(f"Feature must be of type {features.Feature}")
             if Feature.id.startswith("_"): raise KeyError("Feature.id may not start with '_'")
