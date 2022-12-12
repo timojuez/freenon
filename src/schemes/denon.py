@@ -445,6 +445,7 @@ class DevicePower(PowerFeature):
     category = Category.GENERAL
     function = "PW"
     translation = {"ON":True,"STANDBY":False}
+    dummy_value = True
 
     def on_change(self, val):
         super().on_change(val)
@@ -568,7 +569,8 @@ class MainZonePower(ZonePowerFeature):
     id = "power"
     category = Category.GENERAL
     function = "ZM"
-    
+    dummy_value = True
+
 @Denon.add_feature
 class RecSelect(SelectFeature): function = "SR"
 
