@@ -460,11 +460,15 @@ class FeatureBlock:
     Handles CVa\r CVb\r CVc\r CVEND on Denon.
     Subfeatures must be added to the Scheme as Scheme.add_feature(parent=FeatureBlock).
     """
+    _resending = False
 
     def resend(self):
+        if self._resending: return #prevent recursive call when schedule() polls
+        self._resending = True
         def func(*features):
             for f in features: self.target.send(f.serialize(f.get()))
-        self.target.schedule(func, requires=self.children)
+        try: self.target.schedule(func, requires=self.children)
+        finally: self._resending = False
 
     def is_set(self): return True
     def consume(self, *args, **xargs): pass
