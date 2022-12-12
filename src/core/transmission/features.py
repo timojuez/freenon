@@ -160,6 +160,36 @@ class AsyncFeature(FeatureInterface, Bindable, metaclass=_MetaFeature):
     def __exit__(self, *args, **xargs):
         self._lock.__exit__(*args, **xargs)
 
+    @classmethod
+    def as_child(cls, parent):
+        class Child(cls):
+            id = cls.id
+            name = cls.name
+
+            def __init__(self, *args, **xargs):
+                super().__init__(*args, **xargs)
+                self.parent = self.target.features[parent.id]
+                self.parent.children.append(self.id)
+
+            def matches(self, data):
+                return self.parent.matches(data) and super().matches(self.parent.unserialize(data))
+
+            def poll_on_client(self, *args, **xargs):
+                self.parent.poll_on_client(*args, **xargs)
+
+            def _send(self, *args, **xargs):
+                if issubclass(self.target.__class__, ServerType):
+                    self.parent.resend()
+                else:
+                    super()._send(*args, **xargs)
+
+            def serialize(self, value):
+                return self.parent.serialize(super().serialize(value))
+
+            def unserialize(self, data):
+                return super().unserialize(self.parent.unserialize(data))
+        return Child
+
     def get(self):
         if not self.is_set(): raise ConnectionError(f"`{self.id}` not available. Use Target.schedule")
         else: return self._val

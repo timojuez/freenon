@@ -346,47 +346,23 @@ class _AbstractSchemeMeta(ABCMeta):
             class MyFeature(Feature): pass
         """
         def add(Feature):
-            if parent:
-                if cls.features.get(parent.id) != parent:
-                    raise ValueError(f"Parent {parent.id} does not exist in {cls}.")
-                class Feature(Feature):
-                    id = Feature.id
-                    name = Feature.name
-
-                    def __init__(self, *args, **xargs):
-                        super().__init__(*args, **xargs)
-                        self.parent = self.target.features[parent.id]
-                        self.parent.children.append(self.id)
-
-                    def matches(self, data):
-                        return self.parent.matches(data) and super().matches(self.parent.unserialize(data))
-
-                    def poll_on_client(self, *args, **xargs):
-                        self.parent.poll_on_client(*args, **xargs)
-
-                    def _send(self, *args, **xargs):
-                        if issubclass(self.target.__class__, ServerType):
-                            self.parent.resend()
-                        else:
-                            super()._send(*args, **xargs)
-
-                    def serialize(self, value):
-                        return self.parent.serialize(super().serialize(value))
-
-                    def unserialize(self, data):
-                        return super().unserialize(self.parent.unserialize(data))
-
-            if not issubclass(Feature, features.Feature):
+            if parent is None:
+                F = Feature
+            elif cls.features.get(parent.id) != parent:
+                raise ValueError(f"Parent {parent.id} does not exist in {cls}.")
+            else:
+                F = Feature.as_child(parent)
+            if not issubclass(F, features.Feature):
                 raise TypeError(f"Feature must be of type {features.Feature}")
-            if Feature.id.startswith("_"): raise KeyError("Feature.id may not start with '_'")
-            if hasattr(cls.features.__class__, Feature.id):
-                raise KeyError("Feature.id `%s` is already occupied."%Feature.id)
-            if not overwrite and Feature.id in cls.features:
+            if F.id.startswith("_"): raise KeyError("Feature.id may not start with '_'")
+            if hasattr(cls.features.__class__, F.id):
+                raise KeyError("Feature.id `%s` is already occupied."%F.id)
+            if not overwrite and F.id in cls.features:
                 raise KeyError(
-                    "Feature.id `%s` is already occupied. Use add_feature(overwrite=True)"%Feature.id)
-            cls.features.pop(Feature.id, None)
-            cls.features[Feature.id] = Feature
-            cls.feature_categories[Feature.category] = None
+                    "Feature.id `%s` is already occupied. Use add_feature(overwrite=True)"%F.id)
+            cls.features.pop(F.id, None)
+            cls.features[F.id] = F
+            cls.feature_categories[F.category] = None
             return Feature
         return add(Feature) if Feature else add
 
