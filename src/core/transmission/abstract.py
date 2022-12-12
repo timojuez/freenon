@@ -341,8 +341,8 @@ class _AbstractSchemeMeta(ABCMeta):
         This is a decorator to be used on Feature class definitions that belong to the current class.
         @overwrite: If true, proceeds if a feature with same id already exists.
         Example:
-            from client.feature import Feature
-            @AbstractClient.add_feature
+            from features import Feature
+            @AbstractScheme.add_feature
             class MyFeature(Feature): pass
         """
         def add(Feature):
