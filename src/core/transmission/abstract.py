@@ -79,8 +79,8 @@ class AbstractTarget(Bindable, AbstractMainloopManager):
     def send(self, data): raise NotImplementedError()
 
     def on_receive_raw_data(self, data):
-        consumed = [f.consume(data) for f_id,f in self.features.items() if f.matches(data)]
-        if not consumed: self.features.fallback.consume(data)
+        consumed = [f.consume([data]) for f_id,f in self.features.items() if f.matches(data)]
+        if not consumed: self.features.fallback.consume([data])
 
     def handle_uri_path(self, uri):
         if uri.path.startswith("/get/") and (f := self.features.get(uri.path[len("/get/"):])):
@@ -417,14 +417,15 @@ class Fallback(features.OfflineFeatureMixin, features.SelectFeature):
     name = "Last Unexpected Message"
 
     def consume(self, data):
-        if self.target.verbose > 1:
-            print("[%s] WARNING: could not parse `%s`"%(self.__class__.__name__, data))
-        with self._lock:
-            self._prev_val = self._val
-            self._val = data
-            self.on_change(data)
-            if self._prev_val == None: self.on_set()
-            self.on_processed(data)
+        for data_ in data:
+            if self.target.verbose > 1:
+                print("[%s] WARNING: could not parse `%s`"%(self.__class__.__name__, data_))
+            with self._lock:
+                self._prev_val = self._val
+                self._val = data_
+                self.on_change(data_)
+                if self._prev_val == None: self.on_set()
+                self.on_processed(data_)
 
 
 @AbstractScheme.add_feature

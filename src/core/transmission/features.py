@@ -104,11 +104,11 @@ class FeatureInterface(object):
         raise NotImplementedError()
         
     def serialize(self, value):
-        """ transform @value to string """
+        """ transform @value to list of strings """
         raise NotImplementedError()
 
     def unserialize(self, data):
-        """ transform string @data to type self.type """
+        """ transform list of strings @data to type self.type """
         raise NotImplementedError()
 
 
@@ -172,7 +172,7 @@ class AsyncFeature(FeatureInterface, Bindable, metaclass=_MetaFeature):
                 self.parent.children.append(self.id)
 
             def matches(self, data):
-                return self.parent.matches(data) and super().matches(self.parent.unserialize(data))
+                return self.parent.matches(data) and super().matches(self.parent.unserialize([data]))
 
             def poll_on_client(self, *args, **xargs):
                 self.parent.poll_on_client(*args, **xargs)
@@ -184,10 +184,10 @@ class AsyncFeature(FeatureInterface, Bindable, metaclass=_MetaFeature):
                     super()._send(*args, **xargs)
 
             def serialize(self, value):
-                return self.parent.serialize(super().serialize(value))
+                return [y for x in super().serialize(value) for y in self.parent.serialize(x)]
 
             def unserialize(self, data):
-                return super().unserialize(self.parent.unserialize(data))
+                return super().unserialize([self.parent.unserialize(data)])
         return Child
 
     def get(self):
@@ -204,7 +204,7 @@ class AsyncFeature(FeatureInterface, Bindable, metaclass=_MetaFeature):
 
     def _send(self, serialized):
         self.on_send()
-        self.target.send(serialized)
+        for data in serialized: self.target.send(data)
 
     def _blocked(self, serialized):
         """ prevent sending the same line many times """
@@ -421,25 +421,21 @@ class ServerToClientFeatureMixin:
     def remote_set(self, *args, **xargs): raise RuntimeError("Cannot set value!")
 
 
-class MultipartFeatureMixin:
-    """ This mixin allows you to send and receive a value in multiple parts. The parts are a
-    list. In Telnet, parts could be rows.
-    The function serialize() must return a list and unserialize() will be given a list.
-    is_complete(l) must return True if l contains all parts """
+class Buffered:
+    """ This mixin buffers on consume() and allows you to send and receive a
+    value in multiple parts. The parts are a list. In Telnet, parts could be rows.
+    We call super().consume() only when is_complete() returns True """
 
     def __init__(self, *args, **xargs):
         super().__init__(*args, **xargs)
         self._buffer = []
 
-    def is_complete(self, l):
-        """ @l list, returns True if l contains all parts and can be unserialized """
+    def is_complete(self, buf):
+        """ @buf list, returns True if l contains all parts and can be unserialized """
         raise NotImplementedError()
 
-    def _send(self, serialized):
-        for e in serialized: super()._send(e)
-
     def consume(self, data):
-        self._buffer.append(data)
+        self._buffer.extend(data)
         if self.is_complete(self._buffer):
             super().consume(self._buffer.copy())
             self._buffer.clear()
@@ -466,7 +462,7 @@ class FeatureBlock:
         if self._resending: return #prevent recursive call when schedule() polls
         self._resending = True
         def func(*features):
-            for f in features: self.target.send(f.serialize(f.get()))
+            for f in features: self._send(f.serialize(f.get()))
         try: self.target.schedule(func, requires=self.children)
         finally: self._resending = False
 

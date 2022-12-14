@@ -14,8 +14,8 @@ class Telnet(SocketScheme):
             id = None
             call = cmd
             matches = lambda self, data: matches(data)
-            def serialize(self, value): return value
-            def unserialize(self, data): return data
+            def serialize(self, value): return [value]
+            def unserialize(self, data): return data[0]
         RawFeature.__name__ = cmd
         f = RawFeature(self)
         f.wait_poll(force=True)

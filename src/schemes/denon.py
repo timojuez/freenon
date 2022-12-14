@@ -190,12 +190,13 @@ class _DenonFeature:
     call = property(lambda self: "%s?"%self.function)
     
     def serialize(self, value):
-        return "%s%s"%(self.function, self.serialize_val(value))
+        return ["%s%s"%(self.function, self.serialize_val(value))]
     
     def serialize_val(self, value): return value
 
-    def unserialize(self, cmd):
-        param = cmd[len(self.function):]
+    def unserialize(self, data):
+        assert(len(data) == 1)
+        param = data[0][len(self.function):]
         return self.unserialize_val(param)
 
     def unserialize_val(self, data): return data
@@ -316,7 +317,7 @@ class _LooseNumericFeature:
     def matches(self, data):
         try:
             assert(super().matches(data))
-            self.unserialize(data)
+            self.unserialize([data])
             return True
         except (TypeError, ValueError, AssertionError, InvalidOperation): return False
 
@@ -329,24 +330,22 @@ class LooseBoolFeature(BoolFeature):
     """ Value where the target does not always send a boolean """
 
     def matches(self,data):
-        return super().matches(data) and isinstance(self.unserialize(data), bool)
+        return super().matches(data) and isinstance(self.unserialize([data]), bool)
 
     def on_change(self, val):
         super().on_change(val)
         if val == True: self.target.send(self.call) # make target send the nonbool value TODO: only once
 
 
-class MultipartFeatureMixin(features.MultipartFeatureMixin, DenonFeature, features.Feature):
+class MultipartFeatureMixin(features.Buffered, DenonFeature, features.Feature):
     TERMINATOR = "END"
     def to_parts(self, val): raise NotImplementedError()
     def from_parts(self, l): raise NotImplementedError()
-    def is_complete(self, l): return l[-1] == super().serialize(self.TERMINATOR)
+    def is_complete(self, l): return [l[-1]] == super().serialize(self.TERMINATOR)
     def serialize(self, value):
-        return [super(MultipartFeatureMixin, self).serialize(e)
-            for e in [*self.to_parts(value), self.TERMINATOR]]
+        return [y for x in map(super().serialize, [*self.to_parts(value), self.TERMINATOR]) for y in x]
     def unserialize(self, l):
-        return self.from_parts([super(MultipartFeatureMixin, self).unserialize(e)
-            for e in l[:-1]])
+        return self.from_parts([super(MultipartFeatureMixin, self).unserialize([e]) for e in l[:-1]])
 
 
 class FeatureBlock(features.FeatureBlock, DenonFeature, features.Feature): pass
@@ -357,7 +356,7 @@ class FeatureBlock(features.FeatureBlock, DenonFeature, features.Feature): pass
 class BlockTerminator(features.PresetValueMixin, DenonFeature, features.Feature):
     function = ""
     value = "END"
-    def matches(self, data): super().matches(data) and self.unserialize(data) == self.value
+    def matches(self, data): super().matches(data) and self.unserialize([data]) == self.value
 
 
 @Denon.add_feature(overwrite=True)
@@ -610,7 +609,8 @@ class SoundMode(SelectFeature): #undocumented
     translation_inv = {"Movie":"MSMOVIE", "Music":"MSMUSIC", "Game":"MSGAME", "Pure":"MSDIRECT"}
     
     def serialize(self, value):
-        return self.translation_inv[value] if isinstance(self.target, ClientType) else super().serialize(value)
+        if isinstance(self.target, ClientType): return [self.translation_inv[value]]
+        else: return super().serialize(value)
 
     def on_change(self, val):
         super().on_change(val)
@@ -1011,7 +1011,7 @@ class Idle(features.ServerToClientFeatureMixin, BoolFeature): #undocumented
     function = "SSINFAISSIG "
     translation = {"01": True, "02": False, "12": True} #01: analog, 02: PCM
 
-    def matches(self, data): return super().matches(data) and isinstance(self.unserialize(data), bool)
+    def matches(self, data): return super().matches(data) and isinstance(self.unserialize([data]), bool)
 
 
 @Denon.add_feature
