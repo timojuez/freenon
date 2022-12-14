@@ -337,14 +337,15 @@ class LooseBoolFeature(BoolFeature):
         if val == True: self.target.send(self.call) # make target send the nonbool value TODO: only once
 
 
-class MultipartFeature(features.Buffered, DenonFeature, features.Feature):
+class ListFeature(features.Buffered, DenonFeature, features.Feature):
+    type = list
     TERMINATOR = "END"
 
     def is_complete(self, buf): return super().unserialize(buf[-1:]) == self.TERMINATOR
     def serialize(self, value):
         return [y for x in map(super().serialize, [*value, self.TERMINATOR]) for y in x]
     def unserialize(self, l):
-        return [super(MultipartFeature, self).unserialize([e]) for e in l[:-1]]
+        return [super(ListFeature, self).unserialize([e]) for e in l[:-1]]
 
 
 class FeatureBlock(features.FeatureBlock, DenonFeature, features.Feature): pass
@@ -463,7 +464,7 @@ class Muted(BoolFeature):
     function = "MU"
 
 @Denon.add_feature
-class SourceNames(MultipartFeature): #undocumented
+class SourceNames(ListFeature): #undocumented
     """
     SSFUN ?
     SSFUNSAT/CBL CBL/SAT
@@ -618,7 +619,7 @@ class SoundMode(SelectFeature): #undocumented
 
 
 @Denon.add_feature
-class SoundModeSettings(MultipartFeature): # according to current sound mode #undocumented
+class SoundModeSettings(ListFeature): # according to current sound mode #undocumented
     category = Category.GENERAL
     type = dict
     function = 'OPSML '
