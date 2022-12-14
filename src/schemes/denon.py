@@ -337,15 +337,14 @@ class LooseBoolFeature(BoolFeature):
         if val == True: self.target.send(self.call) # make target send the nonbool value TODO: only once
 
 
-class MultipartFeatureMixin(features.Buffered, DenonFeature, features.Feature):
+class MultipartFeature(features.Buffered, DenonFeature, features.Feature):
     TERMINATOR = "END"
-    def to_parts(self, val): raise NotImplementedError()
-    def from_parts(self, l): raise NotImplementedError()
-    def is_complete(self, l): return [l[-1]] == super().serialize(self.TERMINATOR)
+
+    def is_complete(self, buf): return super().unserialize(buf[-1:]) == self.TERMINATOR
     def serialize(self, value):
-        return [y for x in map(super().serialize, [*self.to_parts(value), self.TERMINATOR]) for y in x]
+        return [y for x in map(super().serialize, [*value, self.TERMINATOR]) for y in x]
     def unserialize(self, l):
-        return self.from_parts([super(MultipartFeatureMixin, self).unserialize([e]) for e in l[:-1]])
+        return [super(MultipartFeature, self).unserialize([e]) for e in l[:-1]]
 
 
 class FeatureBlock(features.FeatureBlock, DenonFeature, features.Feature): pass
@@ -464,7 +463,7 @@ class Muted(BoolFeature):
     function = "MU"
 
 @Denon.add_feature
-class SourceNames(MultipartFeatureMixin): #undocumented
+class SourceNames(MultipartFeature): #undocumented
     """
     SSFUN ?
     SSFUNSAT/CBL CBL/SAT
@@ -478,8 +477,8 @@ class SourceNames(MultipartFeatureMixin): #undocumented
     call = "SSFUN ?"
     default_value = {code: "% -12s"%name for code, f_id, name in SOURCES}
     def remote_set(self, *args, **xargs): raise RuntimeError("Cannot set value! Set source instead")
-    def to_parts(self, d): return [" ".join(e) for e in d.items()]
-    def from_parts(self, l): return dict([line.split(" ",1) for line in l])
+    def serialize(self, d): return super().serialize([" ".join(e) for e in d.items()])
+    def unserialize(self, data): return dict([line.split(" ",1) for line in super().unserialize(data)])
 
 @Denon.add_feature
 class Source(SelectFeature):
@@ -619,15 +618,18 @@ class SoundMode(SelectFeature): #undocumented
 
 
 @Denon.add_feature
-class SoundModeSettings(MultipartFeatureMixin): # according to current sound mode #undocumented
+class SoundModeSettings(MultipartFeature): # according to current sound mode #undocumented
     category = Category.GENERAL
     type = dict
     function = 'OPSML '
     dummy_value = {"010":"Stereo", "020":"Dolby Surround", "030":"DTS Neural:X", "040":"DTS Virtual:X", "050":"Multi Ch Stereo", "061":"Mono Movie", "070":"Virtual"}
 
-    def to_parts(self, d):
-        return ["".join([key[:2], str(int(self.target.features.sound_mode_setting.get() == val)), val])
-            for key, val in d.items()]
+    def serialize(self, d):
+        return super().serialize(
+            ["".join([key[:2], str(int(self.target.features.sound_mode_setting.get() == val)), val])
+            for key, val in d.items()])
+
+    def unserialize(self, data): return {e[:3]: e[3:] for e in super().unserialize(data)}
 
     def resend(self):
         self.target.schedule(lambda f: super(SoundModeSettings, self).resend(),
@@ -636,8 +638,6 @@ class SoundModeSettings(MultipartFeatureMixin): # according to current sound mod
     def remote_set(self, *args, **xargs):
         self.target.schedule(lambda f: super(SoundModeSettings, self).remote_set(*args, **xargs),
             requires=("sound_mode_setting",))
-
-    def from_parts(self, l): return {data[:3]: data[3:] for data in l}
 
 
 @Denon.add_feature
