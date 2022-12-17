@@ -618,12 +618,32 @@ class SoundMode(SelectFeature): #undocumented
         self.target.features.sound_mode_settings.async_poll(force=True)
 
 
-@Denon.add_feature
-class SoundModeSettings(ListFeature): # according to current sound mode #undocumented
+class _SoundModeSettings:
     category = Category.GENERAL
-    type = dict
     function = 'OPSML '
+
+
+@Denon.add_feature
+class SoundModeCall(_SoundModeSettings, DenonFeature, features.Feature):
+    def is_set(self): return True
+    def matches(self, data): return False
+    def remote_set(self, *args, **xargs): raise NotImplementedError()
+    def set(self, *args, **xargs): raise NotImplementedError()
+
+    def resend(self):
+        if isinstance(self.target, ServerType):
+            self.target.schedule(lambda f: f.resend(), requires=(SoundModeSettings.id,))
+        else: super().resend()
+
+
+@Denon.add_feature
+class SoundModeSettings(_SoundModeSettings, ListFeature): # according to current sound mode #undocumented
+    type = dict
+    call = None
     dummy_value = {"010":"Stereo", "020":"Dolby Surround", "030":"DTS Neural:X", "040":"DTS Virtual:X", "050":"Multi Ch Stereo", "061":"Mono Movie", "070":"Virtual"}
+
+    def poll_on_client(self, *args, **xargs):
+        self.target.features[SoundModeCall.id].poll_on_client(*args, **xargs)
 
     def serialize(self, d):
         return super().serialize(
@@ -642,14 +662,16 @@ class SoundModeSettings(ListFeature): # according to current sound mode #undocum
 
 
 @Denon.add_feature
-class SoundModeSetting(SelectFeature):
-    category = Category.GENERAL
-    function = 'OPSML '
+class SoundModeSetting(_SoundModeSettings, SelectFeature):
+    call = None
     dummy_value = "Stereo"
 
     def __init__(self, *args, **xargs):
         super().__init__(*args, **xargs)
         self.target.features.sound_mode_settings.bind(self.on_sound_modes_change)
+
+    def poll_on_client(self, *args, **xargs):
+        self.target.features[SoundModeCall.id].poll_on_client(*args, **xargs)
 
     def on_sound_modes_change(self, sound_modes):
         self.translation = sound_modes
@@ -659,6 +681,12 @@ class SoundModeSetting(SelectFeature):
     def matches(self, data): return super().matches(data) and data[len(self.function)+2] == "1"
     def serialize_val(self, val): return "%s1%s"%(super().serialize_val(val)[:2], val)
     def unserialize_val(self, data): return data[3:]
+
+    def _send(self, *args, **xargs):
+        if isinstance(self.target, ClientType): return super()._send(*args, **xargs)
+        else:
+            self.target.schedule(lambda *_: self.target.features.sound_mode_settings.resend(),
+                requires=(SoundModeSettings.id,))
 
 
 @Denon.add_feature
