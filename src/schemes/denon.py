@@ -147,6 +147,8 @@ Category = type("Category", tuple(), dict(
     **{f"ZONE_{zone}": f"Zone {zone}" for zone in ZONES}
 ))
 
+DUMMY_MODEL = "X7800H"
+
 
 class Denon(SocketScheme):
     description = "Denon/Marantz AVR compatible (tested with Denon X1400H)"
@@ -517,7 +519,7 @@ class Source(SelectFeature):
 @Denon.add_feature(overwrite=True)
 class Name(features.ServerToClientFeatureMixin, SelectFeature): #undocumented
     default_value = "Denon AVR"
-    dummy_value = "Dummy X7800H"
+    dummy_value = f"Dummy {DUMMY_MODEL}"
     function = "NSFRN "
 
 
