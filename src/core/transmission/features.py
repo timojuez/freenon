@@ -130,6 +130,7 @@ class AsyncFeature(FeatureInterface, Bindable, metaclass=_MetaFeature):
     Warning: Calling get() in the event callbacks can cause deadlocks.
         Instead, get the value from the function parameter.
     """
+    name = None
     _val = None
     _prev_val = None
     _block_on_remote_set = None
@@ -149,8 +150,6 @@ class AsyncFeature(FeatureInterface, Bindable, metaclass=_MetaFeature):
         self.children = []
         target.features[self.id] = self
         
-    name = property(lambda self:self.__class__.__name__)
-    
     def __str__(self):
         with self: return str(self.get()) if self.is_set() else "..."
 
@@ -336,7 +335,7 @@ class SynchronousFeature(AsyncFeature):
             try: return super().get()
             except ConnectionError:
                 if self.wait_poll(): return super().get()
-                else: raise ConnectionError("Timeout on waiting for answer for %s"%self.__class__.__name__)
+                else: raise ConnectionError("Timeout on waiting for answer for %s"%self.id)
 
     def wait_poll(self, force=False):
         """ Poll and wait if Feature is unset. Returns False on timeout and True otherwise """
