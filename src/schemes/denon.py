@@ -337,7 +337,7 @@ class LooseBoolFeature(BoolFeature):
         if val == True: self.target.send(self.call) # make target send the nonbool value TODO: only once
 
 
-class ListFeature(features.Buffered, DenonFeature, features.Feature):
+class ListFeature(DenonFeature, features.Feature):
     type = list
     TERMINATOR = "END"
 

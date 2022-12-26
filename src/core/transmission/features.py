@@ -143,6 +143,7 @@ class AsyncFeature(FeatureInterface, Bindable, metaclass=_MetaFeature):
         if not any([isinstance(target, c) for c in target_type]):
             raise TypeError("target must inherit one of %s."%(", ".join(map(lambda c:c.__name__, target_type))))
         self.target = target
+        self._buffer = []
         self._lock = self._lock()
         self._event_on_set = self._event_on_set()
         self.children = []
@@ -245,9 +246,18 @@ class AsyncFeature(FeatureInterface, Bindable, metaclass=_MetaFeature):
     
     def resend(self):
         self._send(self.serialize(self.get()))
-    
+
+    def is_complete(self, buf):
+        """ @buf list, returns True if l contains all parts and can be unserialized """
+        return True
+
     def consume(self, data):
         """ unserialize and apply @data to this object """
+        self._buffer.extend(data)
+        if self.is_complete(self._buffer):
+            data = self._buffer.copy()
+            self._buffer.clear()
+        else: return
         self.__class__._block_on_remote_set = None # for power.consume("PWON")
         try: d = self.unserialize(data)
         except:
@@ -419,26 +429,6 @@ class ServerToClientFeatureMixin:
     options = []
 
     def remote_set(self, *args, **xargs): raise RuntimeError("Cannot set value!")
-
-
-class Buffered:
-    """ This mixin buffers on consume() and allows you to send and receive a
-    value in multiple parts. The parts are a list. In Telnet, parts could be rows.
-    We call super().consume() only when is_complete() returns True """
-
-    def __init__(self, *args, **xargs):
-        super().__init__(*args, **xargs)
-        self._buffer = []
-
-    def is_complete(self, buf):
-        """ @buf list, returns True if l contains all parts and can be unserialized """
-        raise NotImplementedError()
-
-    def consume(self, data):
-        self._buffer.extend(data)
-        if self.is_complete(self._buffer):
-            super().consume(self._buffer.copy())
-            self._buffer.clear()
 
 
 class OfflineFeatureMixin:
