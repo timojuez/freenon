@@ -131,6 +131,7 @@ class AsyncFeature(FeatureInterface, Bindable, metaclass=_MetaFeature):
         Instead, get the value from the function parameter.
     """
     name = None
+    parent = None
     _val = None
     _prev_val = None
     _block_on_remote_set = None
