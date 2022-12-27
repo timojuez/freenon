@@ -343,7 +343,9 @@ class ListFeature(DenonFeature, features.Feature):
     type = list
     TERMINATOR = "END"
 
-    def is_complete(self, buf): return super().unserialize(buf[-1:]) == self.TERMINATOR
+    def is_complete(self, buf):
+        b = [self.parent.unserialize(buf[-1:])] if self.parent else buf[-1:]
+        return super().unserialize(b) == self.TERMINATOR
     def serialize(self, value):
         return [y for x in map(super().serialize, [*value, self.TERMINATOR]) for y in x]
     def unserialize(self, l):
