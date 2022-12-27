@@ -1192,9 +1192,45 @@ class MenuVisibility(BoolFeature): #undocumented
 
 
 @Denon.add_feature
+class VersionInformationBlock(FeatureBlock):
+    function = "VIALL"
+
+@Denon.add_feature(parent=VersionInformationBlock)
+class AvrModel(SelectFeature):
+    function = "AVR"
+    dummy_value = f"{DUMMY_MODEL} E2"
+
+@Denon.add_feature(parent=VersionInformationBlock)
 class SerialNumber(SelectFeature):
-    call = "VIALL?"
-    function = "VIALLS/N."
+    function = "S/N."
+    dummy_value = "ABC01234567890"
+
+@Denon.add_feature(parent=VersionInformationBlock)
+class VersionInformation(ListFeature):
+    function = ""
+    TERMINATOR = "END:END"
+    dummy_value = [
+        #f"AVR{DUMMY_MODEL} E2",
+        #"S/N.ABC01234567890",
+        "MAIN:7897897897897",
+        "MAINFBL:00.30",
+        "DSP:07.17",
+        "APLD:60.03",
+        "GUIDAT:98798798",
+        "HIMG:58464D16",
+        "HEOSVER:2.71.270",
+        "HEOSBLD:205357",
+        "HEOSMOD:5",
+        "HEOSCNF:Production",
+        "HEOSLCL:en_EU",
+        "MAC:012345-6789AB",
+        "WIFIMAC:CDEF01-234567",
+        "BTMAC:89ABCD-EF0123",
+        "AUDYIF:00.08",
+        "PRODUCTID:000123456789",
+        "PACKAGEID:0014",
+        "CMP:OK",
+    ]
 
 
 @Denon.add_feature
