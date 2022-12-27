@@ -188,7 +188,17 @@ class AsyncFeature(FeatureInterface, Bindable, metaclass=_MetaFeature):
                 return [y for x in super().serialize(value) for y in self.parent.serialize(x)]
 
             def unserialize(self, data):
-                return super().unserialize([self.parent.unserialize(data)])
+                # split data into chunks as small as possible so that parent.is_complete(chunk) is True
+                # and pass to parent.unserialize()
+                buf = []
+                output = []
+                while data:
+                    buf.append(data.pop(0))
+                    if self.parent.is_complete(buf):
+                        output.append(self.parent.unserialize(buf))
+                        buf.clear()
+                if buf: raise ValueError(f"{buf} could not be unserialized by {self.parent.id}")
+                return super().unserialize(output)
         return Child
 
     def get(self):
