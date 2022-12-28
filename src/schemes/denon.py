@@ -1119,16 +1119,23 @@ class AmpAssign(SelectFeature): #undocumented
 
 
 @Denon.add_feature
+class OsdBlock(FeatureBlock):
+    category = Category.VIDEO
+    function = "SSOSD"
+    call = f"{function} ?"
+
+
+@Denon.add_feature(parent=OsdBlock)
 class VolumeOsd(SelectFeature): #undocumented
     category = Category.VIDEO
-    function = "SSOSDVOL "
+    function = "VOL "
     translation = {"TOP":"Top","BOT":"Bottom","OFF":"Off"}
 
 
-@Denon.add_feature
+@Denon.add_feature(parent=OsdBlock)
 class InfoOsd(BoolFeature): #undocumented
     category = Category.VIDEO
-    function = "SSOSDTXT "
+    function = "TXT "
 
 
 @Denon.add_feature
