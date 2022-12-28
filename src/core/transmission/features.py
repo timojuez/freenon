@@ -271,17 +271,20 @@ class AsyncFeature(FeatureInterface, Bindable, metaclass=_MetaFeature):
         data = self._buffer.copy()
         self._buffer.clear()
         self.__class__._block_on_remote_set = None # for power.consume("PWON")
-        try: d = self.unserialize(data)
+        try:
+            d = self.unserialize(data)
+            return self.target.on_receive_feature_value(self, d)
         except:
             print(f"Error on {self.id}.consume({repr(data)}):", file=sys.stderr)
             print(traceback.format_exc(), file=sys.stderr)
-        else: return self.target.on_receive_feature_value(self, d)
-        
+
     def set(self, value):
         with self._lock: return self._set(value)
     
     def _set(self, value):
         assert(value is not None)
+        if self.type and not isinstance(value, self.type):
+            raise TypeError(f"Value for {self.id} is not of type {self.type.__name__}: {repr(value)}")
         self._prev_val = self._val
         self._val = value
         if not self.is_set(): return
@@ -397,6 +400,9 @@ class DecimalFeature(NumericFeature):
     
     def remote_set(self, value, force=False):
         return super().remote_set((Decimal(value) if isinstance(value, int) else value), force)
+
+    def set(self, val):
+        super().set(Decimal(val) if isinstance(val, int) else val)
 
 
 class PresetValueMixin:
