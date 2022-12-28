@@ -35,7 +35,8 @@ class FunctionCall(object):
             if not self._missing_features:
                 try: self._func(*self._features, *self._args, **self._kwargs)
                 except ConnectionError: pass
-                self.cancel()
+                except: traceback.print_exc()
+                finally: self.cancel()
                 return True
 
     def postpone(self): self._target._pending.append(self)
