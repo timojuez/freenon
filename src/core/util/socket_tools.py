@@ -48,7 +48,8 @@ class Base(AbstractMainloopManager):
         self._connections.add(sock)
 
     def remove_socket(self, sock):
-        self._connections.remove(sock)
+        try: self._connections.remove(sock)
+        except KeyError as e: raise ValueError(e)
         self.sel.unregister(sock)
         try: sock.shutdown(socket.SHUT_RDWR)
         except OSError: pass
@@ -130,7 +131,9 @@ class Client(Base):
         self.add_socket(self._sockets["main"])
 
     def disconnect(self):
-        if sock := self._sockets.pop("main", None): self.remove_socket(sock)
+        if sock := self._sockets.pop("main", None):
+            try: self.remove_socket(sock)
+            except ValueError: pass
 
     #def mainloop_hook(self):
     #    if self.pulse is not None:
