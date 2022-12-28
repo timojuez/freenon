@@ -1393,7 +1393,35 @@ class EnergyUse(IntFeature): #undocumented
     function = "SSECOSTS "
 
 
-# TODO: implement PV
+@Denon.add_feature
+class Optpn(SelectFeature): #undocumented
+    #OPTPN01         008750
+    function = "OPTPN"
+    call = f"{function} ?"
+
+
+@Denon.add_feature
+class TunerBlock(FeatureBlock): #undocumented
+    function = "OPTPSTUNER"
+    call = "OPTPSTUNER ?"
+
+for i in range(1, 57):
+    @Denon.add_feature(parent=TunerBlock)
+    class Tuner(BoolFeature): #undocumented
+        i_ = "%02d"%i
+        function = f"{i_} "
+        id = f"tuner_{i_}"
+        name = f"Tuner #{i_}"
+
+
+@Denon.add_feature
+class LrsSts(SelectFeature): #undocumented
+    function = "SSLRSSTS "
+
+@Denon.add_feature
+class SdpSts(SelectFeature): #undocumented
+    function = "SSSDPSTS "
+
 
 for zone in ZONES:
     
