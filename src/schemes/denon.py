@@ -1138,6 +1138,20 @@ class InfoOsd(BoolFeature): #undocumented
     function = "TXT "
 
 
+@Denon.add_feature(parent=OsdBlock)
+class OsdFormat(SelectFeature): #undocumented
+    category = Category.VIDEO
+    function = "FMT "
+    dummy_value = "PAL"
+
+
+@Denon.add_feature(parent=OsdBlock)
+class OsdPbs(SelectFeature): #undocumented
+    category = Category.VIDEO
+    function = "PBS "
+    dummy_value = "ALW"
+
+
 @Denon.add_feature
 class HdmiRcSelect(SelectFeature): #undocumented
     function = "SSHOSRSS "
