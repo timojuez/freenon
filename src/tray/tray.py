@@ -167,7 +167,7 @@ class MenuMixin(TargetApp):
         if not compact: return self._add_select_feature(f, compact)
         item = Gtk.CheckMenuItem(f.name)
         on_value_change, on_widget_change = bind_widget_to_value(
-            f.get, f.remote_set, item.get_active, item.set_active)
+            lambda: bool(f.get()), f.remote_set, item.get_active, item.set_active)
         f.bind(gtk(on_value_change))
         item.connect("toggled", lambda event:on_widget_change())
         return item
