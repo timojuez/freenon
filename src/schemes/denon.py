@@ -238,6 +238,37 @@ class _Bool(_Translation):
 
 class SelectFeature(_Translation, DenonFeature, features.SelectFeature): pass
 
+class DynamicSelectFeature(SelectFeature):
+    """ SelectFeature that reads its translation property from another feature """
+    translation_source = None # Feature Class
+
+    def __init__(self, *args, **xargs):
+        super().__init__(*args, **xargs)
+        if getattr(self.translation_source, "type", None) != dict:
+            raise TypeError(f"{self.id}.translation_source must be set to a feature of type dict.")
+        self.translation = self.translation.copy()
+        self.target.features[self.translation_source.id].bind(self.on_translation_change)
+
+    def on_translation_change(self, translation):
+        strip = lambda d: {k:v.strip() for k, v in d.items()}
+        with self._lock:
+            if self.is_set():
+                old = self.serialize(self._val)
+                self.translation.update(strip(translation))
+                self._val = self.unserialize(old)
+                self.on_change(self._val) # cause listeners to update from self.translation
+            else:
+                self.translation.update(strip(translation))
+
+    def consume(self, data):
+        self.target.schedule(lambda *_: super(DynamicSelectFeature, self).consume(data),
+            requires=(self.translation_source.id,))
+
+    def remote_set(self, *args, **xargs):
+        self.target.schedule(lambda *_: super(DynamicSelectFeature, self).remote_set(*args, **xargs),
+            requires=(self.translation_source.id,))
+
+
 class NumericFeature(DenonFeature):
     """ add UP/DOWN value decoding capability """
     step = 1
@@ -487,36 +518,11 @@ class SourceNames(ListFeature): #undocumented
     def unserialize(self, data): return dict([line.split(" ",1) for line in super().unserialize(data)])
 
 
-class SourceSelector(SelectFeature):
-
-    def __init__(self, *args, **xargs):
-        super().__init__(*args, **xargs)
-        self.translation = self.translation.copy()
-        self.target.features.source_names.bind(self.on_source_names_change)
-
-    def on_source_names_change(self, source_names):
-        strip = lambda d: {k:v.strip() for k, v in d.items()}
-        with self._lock:
-            if self.is_set():
-                old = self.serialize(self._val)
-                self.translation.update(strip(source_names))
-                self._val = self.unserialize(old)
-                self.on_change(self._val) # cause listeners to update from self.translation
-            else:
-                self.translation.update(strip(source_names))
-        
-    def consume(self, data):
-        self.target.schedule(lambda *_: super(SourceSelector, self).consume(data), requires=("source_names",))
-    
-    def remote_set(self, *args, **xargs):
-        self.target.schedule(lambda *_: super(SourceSelector, self).remote_set(*args, **xargs),
-            requires=("source_names",))
-
-
 @Denon.add_feature
-class Source(SourceSelector):
+class Source(DynamicSelectFeature):
     category = Category.INPUT
     function = "SI"
+    translation_source = SourceNames
     translation = {"NET":"Heos", "BT":"Bluetooth", "USB":"USB"}
 
     def _send(self, *args, **xargs):
