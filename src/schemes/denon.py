@@ -485,12 +485,9 @@ class SourceNames(ListFeature): #undocumented
     def serialize(self, d): return super().serialize([" ".join(e) for e in d.items()])
     def unserialize(self, data): return dict([line.split(" ",1) for line in super().unserialize(data)])
 
-@Denon.add_feature
-class Source(SelectFeature):
-    category = Category.INPUT
-    function = "SI"
-    translation = {"NET":"Heos", "BT":"Bluetooth", "USB":"USB"}
-    
+
+class SourceSelector(SelectFeature):
+
     def __init__(self, *args, **xargs):
         super().__init__(*args, **xargs)
         self.translation = self.translation.copy()
@@ -508,14 +505,23 @@ class Source(SelectFeature):
                 self.translation.update(strip(source_names))
         
     def consume(self, data):
-        self.target.schedule(lambda *_: super(Source, self).consume(data), requires=("source_names",))
+        self.target.schedule(lambda *_: super(SourceSelector, self).consume(data), requires=("source_names",))
     
-    def _remote_set(self, *args, **xargs):
-        super(Source, self).remote_set(*args, **xargs)
-        self.async_poll()
-
     def remote_set(self, *args, **xargs):
-        self.target.schedule(lambda *_: self._remote_set(*args, **xargs), requires=("source_names",))
+        self.target.schedule(lambda *_: super(SourceSelector, self).remote_set(*args, **xargs),
+            requires=("source_names",))
+
+
+@Denon.add_feature
+class Source(SourceSelector):
+    category = Category.INPUT
+    function = "SI"
+    translation = {"NET":"Heos", "BT":"Bluetooth", "USB":"USB"}
+
+    def _send(self, *args, **xargs):
+        super()._send(*args, **xargs)
+        if isinstance(self.target, ClientType):
+            self.async_poll()
 
 
 @Denon.add_feature(overwrite=True)
