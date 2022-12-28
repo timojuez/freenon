@@ -729,9 +729,22 @@ class TechnicalSoundMode(SelectFeature):
         self.target.features.sound_mode_setting.async_poll(force=True)
 
 
-class _QuickSelect(SelectFeature):
+@Denon.add_feature
+class QuickSelectNames(ListFeature): #undocumented
+    function = 'SSQSNZMA'
+    call = 'SSQSNZMA ?'
+    TERMINATOR = " END"
+    type = dict
+    default_value = {str(i): f"Quick Select {i}" for i in QUICK_SELECT_KEYS}
+    def serialize(self, val): return super().serialize([f"QS{i} {name}" for i, name in val.items()])
+    def unserialize(self, data):
+        return dict(sorted([(l[2], l[4:]) for l in super().unserialize(data)]))
+
+
+class _QuickSelect(DynamicSelectFeature):
     function="MSQUICK"
-    translation = {str(n):str(n) for n in QUICK_SELECT_KEYS}
+    translation_source = QuickSelectNames
+
 
 @Denon.add_feature
 class QuickSelect(_QuickSelect):
@@ -756,6 +769,21 @@ class QuickSelectStore(features.ClientToServerFeatureMixin, _QuickSelect):
         
     def resend(self):
         self.target.schedule(lambda quick_select: quick_select.resend(), requires=("quick_select",))
+
+
+@Denon.add_feature
+class QuickSelectSourcesBlock(FeatureBlock): #undocumented
+    function = "SSQSSZMA"
+    call = f"{function} ?"
+
+
+for i in QUICK_SELECT_KEYS:
+    @Denon.add_feature(parent=QuickSelectSourcesBlock)
+    class QuickSelect(DynamicSelectFeature): #undocumented
+        id = f"quick_select_source_{i}"
+        name = f"Quick Select {i}: Source"
+        function = f"QS{i} "
+        translation_source = SourceNames
 
 
 @Denon.add_feature
