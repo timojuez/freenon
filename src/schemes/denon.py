@@ -11,6 +11,7 @@ from ..core.transmission.types import ClientType, ServerType
 
 
 ZONES = [2, 3, 4]
+QUICK_SELECT_KEYS = [1, 2, 3, 4]
 
 SPEAKERS = [
     ('FL', 'front_left', 'Front Left'),
@@ -724,7 +725,7 @@ class TechnicalSoundMode(SelectFeature):
 
 class _QuickSelect(SelectFeature):
     function="MSQUICK"
-    translation = {str(n+1):str(n+1) for n in range(5)}
+    translation = {str(n):str(n) for n in QUICK_SELECT_KEYS}
 
 @Denon.add_feature
 class QuickSelect(_QuickSelect):
