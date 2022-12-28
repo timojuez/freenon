@@ -1228,23 +1228,34 @@ class SourceVolumeLevelBlockTerminator(BlockTerminator):
 
 
 @Denon.add_feature
+class SpeakerDistanceBlock(FeatureBlock):
+    category = Category.SPEAKERS
+    function = "SSSDE"
+    call = f"{function} ?"
+
+
+@Denon.add_feature(parent=SpeakerDistanceBlock)
 class SpeakerDistanceStep(SelectFeature): #undocumented
     category = Category.SPEAKERS
-    call = "SSSDE ?"
-    function = "SSSDESTP "
+    function = "STP "
     translation = {"01M": "0.1m", "02M": "0.01m", "01F": "1ft", "02F": "0.1ft"}
 
 
 for code, f_id, name in SPEAKERS:
-    @Denon.add_feature
+    @Denon.add_feature(parent=SpeakerDistanceBlock)
     class SpeakerDistance(IntFeature): #undocumented
         name = f"{name} Distance"
         id = f"{f_id}_distance"
         category = Category.SPEAKERS
         min = 0
         max = 1800
-        call = "SSSDE ?"
-        function = f"SSSDE{code} "
+        function = f"{code} "
+
+
+@Denon.add_feature(parent=SpeakerDistanceBlock)
+class SpeakerDistanceBlockTerminator(BlockTerminator):
+    category = Category.SPEAKERS
+    value = " END"
 
 
 @Denon.add_feature
