@@ -1570,6 +1570,17 @@ class DtsVersion(SelectFeature): #undocumented
 class FirmwareBlockTerminator(BlockTerminator):
     value = " END"
 
+@Denon.add_feature
+class FrontSpeakers(SelectFeature): #undocumented
+    function = "SSFRSDST "
+    call = "SSFRS ?"
+    translation = {"SPA": "A", "SPB": "B", "A+B": "A+B"}
+
+@Denon.add_feature
+class EcoPod(SelectFeature): #undocumented
+    function = "SSECOPOD "
+    translation = {"LAT": "Lat"}
+
 
 for zone in ZONES:
     
