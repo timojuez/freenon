@@ -75,7 +75,7 @@ class SocketClient(_IO, socket_tools.Client, AbstractClient):
     def connect(self):
         with self._connect_lock:
             if self.connected: return
-            try: super().connect(timeout=2)
+            try: super().connect(timeout=5)
             except (ConnectionError, socket.timeout, socket.gaierror, socket.herror, OSError) as e:
                 raise ConnectionError(e)
             else: self.on_connect()
