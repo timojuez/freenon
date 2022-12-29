@@ -1386,6 +1386,7 @@ def create_source_input_assign_block(input_code, input_value_code, input_id, inp
         id = f"input_{input_id}_block"
         category = Category.INPUT
         function = f"SS{input_code}"
+        call = f"{function} ?"
     return input_id, SourceInputAssignBlock
 
 sourceInputAssignBlocks = dict([create_source_input_assign_block(*args) for args in INPUTS])
@@ -1398,7 +1399,6 @@ for input_code, input_value_code, input_id, input_name in INPUTS:
             id = f"input_{source_id}_{input_id}"
             category = Category.INPUT
             function = f"{source_code} "
-            call = f"SS{input_code} ?"
             translation = {"OFF":"None", "FRO":"Front",
                 **{f"{input_value_code}{i}":f"{input_name} {i}" for i in range(7)}}
 
