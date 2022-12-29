@@ -1511,6 +1511,29 @@ class AlsVal(IntFeature): #undocumented
     min = 0
     max = 999
 
+@Denon.add_feature
+class Heq(BoolFeature): #undocumented
+    function = "PSHEQ "
+
+@Denon.add_feature
+class FirmwareBlock(FeatureBlock):
+    function = "SSINFFRM"
+    call = f"{function} ?"
+
+@Denon.add_feature(parent=FirmwareBlock)
+class FirmwareVersion(SelectFeature): #undocumented
+    function = "AVR "
+    dummy_value = "4700-2061-1072-1070"
+
+@Denon.add_feature(parent=FirmwareBlock)
+class DtsVersion(SelectFeature): #undocumented
+    function = "DTS "
+    dummy_value = "3.90.50.00"
+
+@Denon.add_feature(parent=FirmwareBlock)
+class FirmwareBlockTerminator(BlockTerminator):
+    value = " END"
+
 
 for zone in ZONES:
     
