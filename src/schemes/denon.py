@@ -1488,6 +1488,29 @@ class LrsSts(SelectFeature): #undocumented
 class SdpSts(SelectFeature): #undocumented
     function = "SSSDPSTS "
 
+@Denon.add_feature
+class Loc(BoolFeature): #undocumented
+    function = "SSLOC "
+
+@Denon.add_feature
+class AlsBlock(FeatureBlock): #undocumented
+    function = "SSALS"
+    call = f"{function} ?"
+
+@Denon.add_feature(parent=AlsBlock)
+class AlsSet(BoolFeature): #undocumented
+    function = "SET "
+
+@Denon.add_feature(parent=AlsBlock)
+class AlsDsp(BoolFeature): #undocumented
+    function = "DSP "
+
+@Denon.add_feature(parent=AlsBlock)
+class AlsVal(IntFeature): #undocumented
+    function = "VAL "
+    min = 0
+    max = 999
+
 
 for zone in ZONES:
     
