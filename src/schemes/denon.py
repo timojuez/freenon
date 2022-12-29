@@ -1153,16 +1153,52 @@ class OsdPbs(SelectFeature): #undocumented
 
 
 @Denon.add_feature
+class HosBlock(FeatureBlock):
+    function = "SSHOS"
+    call = f"{function} ?"
+
+@Denon.add_feature(parent=HosBlock)
+class HosConarc(BoolFeature): #undocumented
+    function = "CONARC "
+
+@Denon.add_feature(parent=HosBlock)
+class HosConpsv(BoolFeature): #undocumented
+    function = "CONPSV "
+
+@Denon.add_feature(parent=HosBlock)
+class HosSmn(BoolFeature): #undocumented
+    function = "SMN "
+
+@Denon.add_feature(parent=HosBlock)
 class HdmiRcSelect(SelectFeature): #undocumented
-    function = "SSHOSRSS "
-    call = "SSHOS ?"
+    function = "RSS "
     translation = {"POS":"Power On + Source", "SSO":"Only Source"}
 
-
-@Denon.add_feature
+@Denon.add_feature(parent=HosBlock)
 class HdmiControl(BoolFeature): #undocumented
-    function = "SSHOSCON "
-    call = "SSHOS ?"
+    function = "CON "
+
+@Denon.add_feature(parent=HosBlock)
+class HosConsts(SelectFeature): #undocumented
+    function = "CONSTS "
+    translation = {"LAS": "Las"}
+
+@Denon.add_feature(parent=HosBlock)
+class HosConpof(SelectFeature): #undocumented
+    function = "CONPOF "
+    translation = {"ALL": "All"}
+
+@Denon.add_feature(parent=HosBlock)
+class HosPas(BoolFeature): #undocumented
+    function = "PAS "
+
+@Denon.add_feature(parent=HosBlock)
+class HosTas(BoolFeature): #undocumented
+    function = "TAS "
+
+@Denon.add_feature(parent=HosBlock)
+class HosBlockTerminator(BlockTerminator): #undocumented
+    value = " END"
 
 
 @Denon.add_feature
