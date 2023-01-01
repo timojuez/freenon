@@ -7,7 +7,7 @@ from contextlib import suppress
 from contextlib import AbstractContextManager
 from ..info import PKG_NAME
 from ..core.util import Bindable
-from .common import config, TargetApp
+from .common import config, TargetApp, resolve_feature_id
 from pynput import mouse, keyboard
 LINUX = sys.platform == "linux"
 if LINUX: from ..core.util.x11_grab import XGrab
@@ -41,15 +41,13 @@ class KeyBinding(TargetApp):
         super().__init__(*args, **xargs)
         self.input_listener = InputDeviceListener()
         self.input_listener.bind(
+            on_hotkey_press=self.on_hotkey_press,
             on_mouse_down=self.on_mouse_down,
             on_mouse_up=self.on_mouse_up,
-            on_activated_mouse_move=self.on_activated_mouse_move,
-            on_volume_key_press=self.on_volume_key_press,
-            on_mute_key_press=self.on_mute_key_press)
+            on_activated_mouse_move=self.on_activated_mouse_move)
         self._feature_changed = Event()
         self._feature_step = Event()
         self._set_feature_lock = Lock()
-        self.target.preload_features.add(config.hotkeys_feature)
         self.target.preload_features.add(config.gesture_feature)
         self.target.bind(on_feature_change=self.on_gesture_feature_change)
         Thread(target=self.mouse_gesture_thread, daemon=True, name="key_binding").start()
@@ -61,6 +59,13 @@ class KeyBinding(TargetApp):
     def __exit__(self, *args):
         super().__exit__(*args)
         self.input_listener.__exit__(*args)
+
+    def on_hotkey_press(self, data):
+        if self.verbose >= 5: print(f"[{self.__class__.__name__}] Hotkey pressed:", data)
+        def func(f):
+            if f.type == bool: f.remote_set(not f.get())
+            else: f.remote_set(max(f.min, min(f.max, f.get()+f.type(data["conf"]["step"]))))
+        self.target.schedule(func, requires=(data["f_id"],))
 
     def on_gesture_feature_change(self, f_id, val):
         """ target feature changed """
@@ -102,13 +107,6 @@ class KeyBinding(TargetApp):
             self._new_value = new_value
             self._feature_step.set()
 
-    def on_volume_key_press(self, button):
-        self._save_set_feature_to_relative_value(
-            config.hotkeys_feature, Decimal(config["hotkeys"]["keyboard"][0]["step"])*(int(button)*2-1))
-
-    def on_mute_key_press(self):
-        self.target.schedule(lambda muted: muted.remote_set(not muted.get()), requires=(config.muted,))
-
     def mouse_gesture_thread(self):
         while True:
             self._feature_step.wait()
@@ -130,23 +128,20 @@ class KeyBinding(TargetApp):
 class InputDeviceListener(Bindable, AbstractContextManager):
     """ Runs the pynput listeners """
     _pressed = False
-    
+
+    def __init__(self):
+        super().__init__()
+
     def __enter__(self):
-        self._ctrl = False
         self.mouse_listener = mouse.Listener(
             on_click=self.on_mouse_click,
             on_move=self.on_mouse_move,
         )
-        self.key_listener = keyboard.Listener(
-            on_press=self.on_hotkey_press,
-            on_release=self.on_hotkey_release,
-        )
+        self._start_hotkey_listener()
         if LINUX: self._xgrab = XGrab()
         self._controller = keyboard.Controller()
         self._config_button = config["hotkeys"]["mouse"][0]["button"]
         self.mouse_listener.start()
-        self.key_listener.start()
-        self.set_key_grabbing(config["hotkeys"]["volume_hotkeys"])
         self.set_button_grabbing(bool(self._config_button))
         if LINUX: self._xgrab.enter()
         return super().__enter__()
@@ -154,8 +149,8 @@ class InputDeviceListener(Bindable, AbstractContextManager):
     def __exit__(self, *args, **xargs):
         super().__exit__(*args, **xargs)
         self.mouse_listener.stop()
-        self.key_listener.stop()
-        self.set_key_grabbing(False)
+        try: self.hotkey_listener.stop()
+        except: pass
         self.set_button_grabbing(False)
         if LINUX: self._xgrab.exit()
 
@@ -173,33 +168,26 @@ class InputDeviceListener(Bindable, AbstractContextManager):
 
     def on_activated_mouse_move(self, x, y): pass
 
-    def on_hotkey_press(self, key):
-        if not config["hotkeys"]["volume_hotkeys"]: return
-        key = self.key_listener.canonical(key)
-        if key == keyboard.Key.ctrl: self._ctrl = True
-        elif not self._ctrl: return
-        elif key == keyboard.Key.media_volume_up: self.on_volume_key_press(True)
-        elif key == keyboard.Key.media_volume_down: self.on_volume_key_press(False)
-        elif key == keyboard.Key.media_volume_mute: self.on_mute_key_press()
-
-    def on_volume_key_press(self, pressed): pass
-    def on_mute_key_press(self): pass
-
-    def on_hotkey_release(self, key):
-        key = self.key_listener.canonical(key)
-        if key == keyboard.Key.ctrl: self._ctrl = False
-
-    def set_keyboard_media_keys(self, *args, **xargs):
-        self.set_key_grabbing(False)
-        super().set_keyboard_media_keys(*args, **xargs)
-        self.set_key_grabbing(config["hotkeys"]["volume_hotkeys"])
-
     def set_key_grabbing(self, value):
         """ stop forwarding volume media buttons to other programs """
         if not LINUX: return
         for key in [keyboard.Key.media_volume_up, keyboard.Key.media_volume_up, keyboard.Key.media_volume_mute]:
             if value: self._xgrab.grab_key(key.value.vk, "Control")
             else: self._xgrab.ungrab_key(key.value.vk)
+
+    def refresh_hotkeys(self):
+        try: self.hotkey_listener.stop()
+        except: pass
+        self._start_hotkey_listener()
+
+    def on_hotkey_press(self, data): pass
+
+    def _start_hotkey_listener(self):
+        fire = lambda ks: self.on_hotkey_press({"f_id": resolve_feature_id(ks["feature"]), "conf": ks})
+        try: self.hotkey_listener = keyboard.GlobalHotKeys(
+            {ks["key"]: lambda ks=ks: fire(ks) for ks in config["hotkeys"]["keyboard"]})
+        except ValueError: traceback.print_exc()
+        else: self.hotkey_listener.start()
 
     def refresh_mouse(self):
         self.set_button_grabbing(False)

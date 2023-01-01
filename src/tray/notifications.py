@@ -170,9 +170,9 @@ class NotificationMixin(TrayMixin, KeyBinding, PowerControlMixin, TargetApp):
         if power == True:
             self._poweron_n2.close()
 
-    def on_volume_key_press(self,*args,**xargs):
-        self.show_notification(config.hotkeys_feature)
-        super().on_volume_key_press(*args,**xargs)
+    def on_hotkey_press(self, data):
+        self.show_notification(data["f_id"])
+        super().on_hotkey_press(data)
 
     def show_notification_on_feature_change(self, f_id, value): # bound to target
         f = self.target.features[f_id]

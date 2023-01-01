@@ -3,6 +3,7 @@
 <interface>
   <requires lib="gtk+" version="3.20"/>
   <object class="GtkAdjustment" id="hotkey_steps">
+    <property name="lower">-100</property>
     <property name="upper">100</property>
     <property name="value">2.5</property>
     <property name="step_increment">0.5</property>
@@ -377,21 +378,10 @@
                               <object class="GtkLabel">
                                 <property name="visible">True</property>
                                 <property name="can_focus">False</property>
-                                <property name="label" translatable="yes">Enable media hotkeys</property>
+                                <property name="label" translatable="yes">Hotkey</property>
                               </object>
                               <packing>
                                 <property name="left_attach">0</property>
-                                <property name="top_attach">0</property>
-                              </packing>
-                            </child>
-                            <child>
-                              <object class="GtkSwitch" id="hotkeys">
-                                <property name="visible">True</property>
-                                <property name="can_focus">True</property>
-                                <property name="active">True</property>
-                              </object>
-                              <packing>
-                                <property name="left_attach">1</property>
                                 <property name="top_attach">0</property>
                               </packing>
                             </child>
@@ -439,6 +429,19 @@
                               <packing>
                                 <property name="left_attach">1</property>
                                 <property name="top_attach">1</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkButton" id="hotkey_button">
+                                <property name="label" translatable="yes">button</property>
+                                <property name="visible">True</property>
+                                <property name="can_focus">True</property>
+                                <property name="receives_default">True</property>
+                                <signal name="clicked" handler="on_hotkey_button_clicked" swapped="no"/>
+                              </object>
+                              <packing>
+                                <property name="left_attach">1</property>
+                                <property name="top_attach">0</property>
                               </packing>
                             </child>
                           </object>

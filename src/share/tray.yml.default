@@ -45,11 +45,15 @@ tray:
 
 hotkeys:
     # keyboard hotkey options
-    # Use volume media keys from keyboard to control target
-    volume_hotkeys: True
     keyboard:
       - feature: '@volume_id'
+        step: -3
+        key: <ctrl>+<media_volume_down>
+      - feature: '@volume_id'
         step: 3
+        key: <ctrl>+<media_volume_up>
+      - feature: '@muted_id'
+        key: <ctrl>+<media_volume_mute>
 
     # mouse gesture options
     mouse:
