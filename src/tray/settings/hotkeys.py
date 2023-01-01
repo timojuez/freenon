@@ -14,10 +14,10 @@ class HotkeysMixin:
             item_hotkeys.get_active, item_hotkeys.set_active))
         self.connect_feature_selector_to_config(
             combobox_id="mouse_gesture_function", config_property=("hotkeys", "mouse", 0, "feature"),
-            allow_type=features.NumericFeature, default_value="@volume_id")
+            allow_types=(features.NumericFeature,), default_value="@volume_id")
         self.connect_feature_selector_to_config(
             combobox_id="keyboard_hotkeys_function", config_property=("hotkeys", "keyboard", 0, "feature"),
-            allow_type=features.NumericFeature, default_value="@volume_id")
+            allow_types=(features.NumericFeature,), default_value="@volume_id")
         self.connect_adjustment_to_config("mouse_sensitivity", ("hotkeys", "mouse", 0, "sensitivity"))
         self.connect_adjustment_to_config("mouse_max_step", ("hotkeys", "mouse", 0, "max_step"))
         self.connect_adjustment_to_config("hotkey_steps", ("hotkeys", "keyboard", 0, "step"))

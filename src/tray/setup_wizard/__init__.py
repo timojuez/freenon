@@ -59,7 +59,7 @@ class InputsMixin(TargetSetup):
 
     def _setup_input_selectors(self):
         self.input_selectors = {
-            f:FeatureSelectorCombobox(self.target, self.builder.get_object(f"{f}_feature"), allow_type=t,
+            f:FeatureSelectorCombobox(self.target, self.builder.get_object(f"{f}_feature"), allow_types=(t,),
                 items=[("None", None)])
             for f, t in self.input_settings}
 

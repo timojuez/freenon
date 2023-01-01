@@ -187,13 +187,14 @@ class _FeatureCombobox:
 
 class FeatureSelectorCombobox(_FeatureCombobox):
 
-    def __init__(self, target, *args, allow_type=features.Feature, **xargs):
-        self._allow_type = allow_type
+    def __init__(self, target, *args, allow_types=(features.Feature,), **xargs):
+        self._allow_types = allow_types
         super().__init__(target, *args, **xargs)
 
     def _fill(self):
         if self.target:
-            features_ = [f for f in self.target.features.values() if isinstance(f, self._allow_type)]
+            features_ = [f for f in self.target.features.values()
+                if any(isinstance(f, t) for t in self._allow_types)]
             categories = {f.category:0 for f in features_}
             category = {c:self.store.append(None, [c, -1, False]) for c in categories}
             for f in features_: self.store.append(category[f.category], [f.name, f.id, True])

@@ -24,7 +24,7 @@ class TrayIconMixin:
         self.connect_adjustment_to_config("scroll_delta", ("tray", "scroll_delta"))
         self.connect_feature_selector_to_config(
             combobox_id="tray_icon_function", config_property=("tray", "scroll_feature"),
-            allow_type=features.NumericFeature, default_value="@volume_id",
+            allow_types=(features.NumericFeature,), default_value="@volume_id",
             on_changed=lambda *_:self.app_manager.main_app.icon.update_icon())
 
 
