@@ -5,7 +5,7 @@ from itertools import groupby
 from textwrap import TextWrapper
 from contextlib import suppress
 from decimal import Decimal
-from . import Target, get_schemes, PKG_NAME, VERSION, AUTHOR
+from . import Target, get_schemes, PKG_NAME, VERSION, COPYRIGHT
 from .core import features
 try: import readline
 except ImportError: pass
@@ -70,7 +70,7 @@ class CLI:
         
     def print_header(self):
         print(bright("$_ HIFI SHELL %s"%VERSION))
-        print("Copyright (c) 2020 %s\n"%AUTHOR)
+        print(COPYRIGHT)
         print("To get started, write help()\n")
 
     def prompt(self):
