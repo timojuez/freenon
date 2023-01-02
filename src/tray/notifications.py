@@ -155,15 +155,15 @@ class NotificationMixin(TrayMixin, KeyBinding, PowerControlMixin, TargetApp):
                 self.general_n.show()
             else: n.show()
 
-    def on_mouse_down(self,*args,**xargs):
+    def on_mouse_down(self, gesture, *args, **xargs):
         power = self.target.features.get(config.power)
         try:
             assert(power and power.get() == False)
             self._poweron_n2.update("Power on %s"%self.target.features.name.get())
             self._poweron_n2.show()
         except (AssertionError, ConnectionError):
-            self.show_notification(config.gesture_feature)
-        super().on_mouse_down(*args,**xargs)
+            self.show_notification(gesture["f_id"])
+        super().on_mouse_down(gesture, *args, **xargs)
 
     def on_target_power_change(self, power):
         super().on_target_power_change(power)

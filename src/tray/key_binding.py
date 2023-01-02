@@ -48,7 +48,6 @@ class KeyBinding(TargetApp):
         self._feature_changed = Event()
         self._feature_step = Event()
         self._set_feature_lock = Lock()
-        self.target.preload_features.add(config.gesture_feature)
         self.target.bind(on_feature_change=self.on_gesture_feature_change)
         Thread(target=self.mouse_gesture_thread, daemon=True, name="key_binding").start()
 
@@ -67,35 +66,38 @@ class KeyBinding(TargetApp):
             else: f.remote_set(max(f.min, min(f.max, f.get()+f.type(data["conf"]["step"]))))
         self.target.schedule(func, requires=(data["f_id"],))
 
+    def get_current_gesture_f_id(self):
+        if g := self.input_listener.get_current_gesture():
+            return g["f_id"]
+
     def on_gesture_feature_change(self, f_id, val):
         """ target feature changed """
-        if f_id != config.gesture_feature: return
+        if f_id != self.get_current_gesture_f_id(): return
         self._feature_changed.set()
 
     def set_position_reference(self, y, vol):
         """ link a y-coordinate to a feature value """
         self._y_ref, self._position_ref = y, vol
 
-    def on_mouse_down(self, x, y):
+    def on_mouse_down(self, gesture, x, y):
         self._new_value = None
         this = self._mouse_down_count = (self._mouse_down_count+1)%100
         self._position_ref = None
         def func(f):
             if self._mouse_down_count != this: return # check if this is the most recent call
             self.set_position_reference(y, f.get())
-        self.target.schedule(func, requires=(config.gesture_feature,))
+        self.target.schedule(func, requires=(gesture["f_id"],))
 
-    def on_mouse_up(self, x, y):
+    def on_mouse_up(self, gesture, x, y):
         self._feature_changed.set() # break _feature_changed.wait()
 
-    def on_activated_mouse_move(self, x, y):
-        if (f := self.target.features.get(config.gesture_feature)) is None: return
+    def on_activated_mouse_move(self, gesture, x, y):
+        if (f := self.target.features.get(gesture["f_id"])) is None: return
         if self._position_ref is None: return
         screen_height = get_screen_size(Gdk.Display.get_default())[1]
-        new_value = self._position_ref-int((y-self._y_ref)/screen_height
-            *config["hotkeys"]["mouse"][0]["sensitivity"])
+        new_value = self._position_ref-int((y-self._y_ref)/screen_height*gesture["conf"]["sensitivity"])
         if new_value == self._new_value: return
-        try: max_ = min(f.max, f.get()+Decimal(config["hotkeys"]["mouse"][0]["max_step"]))
+        try: max_ = min(f.max, f.get()+Decimal(gesture["conf"]["max_step"]))
         except ConnectionError: return
         min_ = f.min
         if new_value > max_ or new_value < min_:
@@ -110,7 +112,7 @@ class KeyBinding(TargetApp):
     def mouse_gesture_thread(self):
         while True:
             self._feature_step.wait()
-            if f := self.target.features.get(config.gesture_feature):
+            if f := self.target.features.get(self.get_current_gesture_f_id()):
                 try: self._update_feature_value(f)
                 except ConnectionError: pass
 
@@ -127,10 +129,10 @@ class KeyBinding(TargetApp):
 
 class InputDeviceListener(Bindable, AbstractContextManager):
     """ Runs the pynput listeners """
-    _pressed = False
 
     def __init__(self):
         super().__init__()
+        self._buttons = []
 
     def __enter__(self):
         self.mouse_listener = mouse.Listener(
@@ -140,9 +142,8 @@ class InputDeviceListener(Bindable, AbstractContextManager):
         self._start_hotkey_listener()
         if LINUX: self._xgrab = XGrab()
         self._controller = keyboard.Controller()
-        self._config_button = config["hotkeys"]["mouse"][0]["button"]
         self.mouse_listener.start()
-        self.set_button_grabbing(bool(self._config_button))
+        self.set_button_grabbing(True)
         if LINUX: self._xgrab.enter()
         return super().__enter__()
 
@@ -154,19 +155,27 @@ class InputDeviceListener(Bindable, AbstractContextManager):
         self.set_button_grabbing(False)
         if LINUX: self._xgrab.exit()
 
-    def on_mouse_click(self, x, y, button, pressed):
-        if button.value != self._config_button: return
-        self._pressed = pressed
-        if pressed: self.on_mouse_down(x, y)
-        else: self.on_mouse_up(x, y)
+    def get_current_gesture(self):
+        gestures = [e for e in config["hotkeys"]["mouse"] if e["button"] in self._buttons]
+        if gestures:
+            conf = gestures[0]
+            return {"conf": conf, "f_id": resolve_feature_id(conf["feature"])}
 
-    def on_mouse_down(self, x, y): pass
-    def on_mouse_up(self, x, y): pass
+    def on_mouse_click(self, x, y, button, pressed):
+        if pressed: self._buttons.append(button.value)
+        else: self._buttons.remove(button.value)
+        if gesture := self.get_current_gesture():
+            if pressed: self.on_mouse_down(gesture, x, y)
+            else: self.on_mouse_up(gesture, x, y)
+
+    def on_mouse_down(self, gesture, x, y): pass
+    def on_mouse_up(self, gesture, x, y): pass
 
     def on_mouse_move(self, x, y):
-        if self._pressed: self.on_activated_mouse_move(x, y)
+        if gesture := self.get_current_gesture():
+            self.on_activated_mouse_move(gesture, x, y)
 
-    def on_activated_mouse_move(self, x, y): pass
+    def on_activated_mouse_move(self, gesture, x, y): pass
 
     def set_key_grabbing(self, value):
         """ stop forwarding volume media buttons to other programs """
@@ -191,14 +200,16 @@ class InputDeviceListener(Bindable, AbstractContextManager):
 
     def refresh_mouse(self):
         self.set_button_grabbing(False)
-        self._config_button = config["hotkeys"]["mouse"][0]["button"]
-        self.set_button_grabbing(bool(self._config_button))
+        self.set_button_grabbing(True)
 
     def set_button_grabbing(self, value):
         """ stop forwarding configured mouse button events to other programs """
-        if not LINUX or not self._config_button: return
+        if not LINUX: return
+        buttons = [e["button"] for e in config["hotkeys"]["mouse"]]
         try:
-            if value: self._xgrab.grab_button(self._config_button)
-            else: self._xgrab.ungrab_button(self._config_button)
+            if value:
+                for b in buttons: self._xgrab.grab_button(b)
+            else:
+                for b in buttons: self._xgrab.ungrab_button(b)
         except: traceback.print_exc()
 
