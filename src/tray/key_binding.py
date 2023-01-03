@@ -123,7 +123,8 @@ class KeyBinding(TargetApp):
             new_value = self._new_value
         if new_value in (None, f.get()): return
         self._feature_changed.clear()
-        f.remote_set(new_value)
+        try: f.remote_set(new_value)
+        except: traceback.print_exc()
         sleep()
         self._feature_changed.wait(.2) # wait for on_feature_change
 
