@@ -194,7 +194,7 @@ class InputDeviceListener(Bindable, AbstractContextManager):
     def _start_hotkey_listener(self):
         fire = lambda ks: self.on_hotkey_press({"f_id": resolve_feature_id(ks["feature"]), "conf": ks})
         try: self.hotkey_listener = keyboard.GlobalHotKeys(
-            {ks["key"]: lambda ks=ks: fire(ks) for ks in config["hotkeys"]["keyboard"]})
+            {ks["key"]: lambda ks=ks: fire(ks) for ks in config["hotkeys"]["keyboard"] if ks["key"]})
         except ValueError: traceback.print_exc()
         else: self.hotkey_listener.start()
 

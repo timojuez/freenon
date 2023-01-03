@@ -93,6 +93,6 @@ class HotkeysMixin:
 
     @gtk
     def _set_hotkey_label(self, widget, value):
-        widget.set_label(value)
+        widget.set_label(str(value))
         widget.set_sensitive(True)
 
