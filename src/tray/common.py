@@ -166,12 +166,15 @@ class _FeatureCombobox:
         it = self.c.get_active_iter()
         return self.c.get_model().get_value(it, 1) if it else self._active_value
 
+    def _map_value(self, value): return [value]
+
     def set_active(self, value):
         def iterate(store, path, it):
             v = store.get_value(it, 1)
-            if v == value:
+            if v in self._map_value(value):
                 self.c.set_active_iter(it)
                 self._active_value = value
+                return True
         self._active_value = value
         self.c.set_active(-1)
         self.store.foreach(iterate)
@@ -188,6 +191,8 @@ class FeatureSelectorCombobox(_FeatureCombobox):
     def __init__(self, target, *args, allow_types=(features.Feature,), **xargs):
         self._allow_types = allow_types
         super().__init__(target, *args, **xargs)
+
+    def _map_value(self, value): return [value, resolve_feature_id(value)]
 
     def _fill(self):
         if self.target:
