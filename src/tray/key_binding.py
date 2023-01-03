@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from contextlib import contextmanager
 import time, sys, tempfile, os, traceback
 from gi.repository import Gdk
 from threading import Thread, Lock, Event
@@ -198,8 +199,10 @@ class InputDeviceListener(Bindable, AbstractContextManager):
         except ValueError: traceback.print_exc()
         else: self.hotkey_listener.start()
 
+    @contextmanager
     def refresh_mouse(self):
         self.set_button_grabbing(False)
+        yield
         self.set_button_grabbing(True)
 
     def set_button_grabbing(self, value):

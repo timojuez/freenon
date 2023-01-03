@@ -112,38 +112,53 @@ class HotkeySetting(_Shortcut):
         widget.set_sensitive(True)
 
 
-class MouseGesture:
+class MouseGesture(_Shortcut):
+    config_property = "mouse"
+    new_conf = {"button": None, "sensitivity": 60, "max_step": 8, "feature": None}
+    grid_id = "mouse_gestures"
 
-    def __init__(self, *args, **xargs):
-        super().__init__(*args, **xargs)
-        self.app = self
+    def build(self):
+        button = self.attach(Gtk.Button())
+        button.connect("clicked", self.on_mouse_button_clicked, self.i)
+        self._set_mouse_button_label(button, config["hotkeys"]["mouse"][self.i]["button"])
+        function = self.attach(Gtk.ComboBox())
         self.app.connect_feature_selector_to_config(
-            combobox=self.app.builder.get_object("mouse_gesture_function"),
-            config_property=("hotkeys", "mouse", 0, "feature"),
+            combobox=function,
+            config_property=("hotkeys", "mouse", self.i, "feature"),
             allow_types=(features.NumericFeature,), default_value="@volume_id")
-        self.app.connect_adjustment_to_config(
-            self.app.builder.get_object("mouse_sensitivity"), ("hotkeys", "mouse", 0, "sensitivity"))
-        self.app.connect_adjustment_to_config(
-            self.app.builder.get_object("mouse_max_step"), ("hotkeys", "mouse", 0, "max_step"))
-        self._set_mouse_button_label(self.app.builder.get_object("mouse_button"),
-            config["hotkeys"]["mouse"][0]["button"])
+        sensitivity = self.attach(Gtk.SpinButton())
+        adj = Gtk.Adjustment()
+        adj.configure(0, 1, 1000, 1, 10, 1)
+        sensitivity.set_adjustment(adj)
+        self.app.connect_adjustment_to_config(adj, ("hotkeys", "mouse", self.i, "sensitivity"))
+        max_step = self.attach(Gtk.SpinButton())
+        adj = Gtk.Adjustment()
+        adj.configure(0, 0, 100, 1, 10, 1)
+        max_step.set_adjustment(adj)
+        self.app.connect_adjustment_to_config(max_step, ("hotkeys", "mouse", 0, "max_step"))
 
-    def on_mouse_button_clicked(self, widget):
+    def on_mouse_button_clicked(self, widget, i):
         def on_click(x, y, button, pressed):
             gtk(Gdk.Seat.ungrab)(seat)
             mouse_listener.stop()
             if button.value == 1: print("Button1 is not allowed.")
             else:
-                config["hotkeys"]["mouse"][0]["button"] = button.value
-                config.save()
-                self.app.app_manager.main_app.input_listener.refresh_mouse()
-            self._set_mouse_button_label(widget, config["hotkeys"]["mouse"][0]["button"])
+                with self.app.app_manager.main_app.input_listener.refresh_mouse():
+                    config["hotkeys"]["mouse"][i]["button"] = button.value
+                    config.save()
+            self._set_mouse_button_label(widget, config["hotkeys"]["mouse"][i]["button"])
         widget.set_label("Press mouse key ...")
         widget.set_sensitive(False)
         seat = Gdk.Display.get_default_seat(self.app.window.get_display())
         Gdk.Seat.grab(seat, self.app.window.get_window(), Gdk.SeatCapabilities.POINTER, False)
         mouse_listener = mouse.Listener(on_click=on_click)
         mouse_listener.start()
+
+    def on_remove_clicked(self, *args, **xargs):
+        super().on_remove_clicked(*args, **xargs)
+        with self.app.app_manager.main_app.input_listener.refresh_mouse():
+            self.conf["button"] = None
+            config.save()
 
     @gtk
     def _set_mouse_button_label(self, widget, value):
@@ -155,7 +170,7 @@ class MouseGesture:
         widget.set_sensitive(True)
 
 
-class HotkeysMixin(MouseGesture):
+class HotkeysMixin:
     _can_close = True
 
     def __init__(self, *args, **xargs):
@@ -164,11 +179,14 @@ class HotkeysMixin(MouseGesture):
         config["hotkeys"]["mouse"] = [e for e in config["hotkeys"]["mouse"] if e["button"] is not None]
         for i, conf in enumerate(config["hotkeys"]["keyboard"]):
             HotkeySetting(self, i)
-        #for i, conf in enumerate(config["hotkeys"]["mouse"]):
-        #    MouseGesture(self, i)
+        for i, conf in enumerate(config["hotkeys"]["mouse"]):
+            MouseGesture(self, i)
 
     def on_hotkeys_keyboard_add_clicked(self, w):
         HotkeySetting(self)
+
+    def on_mouse_gesture_add_clicked(self, w):
+        MouseGesture(self)
 
     def on_close_click(self, *args, **xargs):
         if self._can_close: return super().on_close_click(*args, **xargs)
