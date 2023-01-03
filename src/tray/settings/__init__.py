@@ -14,16 +14,18 @@ class PowerControlMixin:
         item_poweroffsd.connect("state-set",
             config.connect_to_object(("power_control", "power_off_on_shutdown"),
             item_poweroffsd.get_active, item_poweroffsd.set_active))
-        self.connect_adjustment_to_config("poweroff_delay", ("power_control", "poweroff_after"))
+        self.connect_adjustment_to_config(
+            self.builder.get_object("poweroff_delay"), ("power_control", "poweroff_after"))
 
 
 class TrayIconMixin:
 
     def __init__(self, *args, **xargs):
         super().__init__(*args, **xargs)
-        self.connect_adjustment_to_config("scroll_delta", ("tray", "scroll_delta"))
+        self.connect_adjustment_to_config(
+            self.builder.get_object("scroll_delta"), ("tray", "scroll_delta"))
         self.connect_feature_selector_to_config(
-            combobox_id="tray_icon_function", config_property=("tray", "scroll_feature"),
+            combobox=self.builder.get_object("tray_icon_function"), config_property=("tray", "scroll_feature"),
             allow_types=(features.NumericFeature,), default_value="@volume_id",
             on_changed=lambda *_:self.app_manager.main_app.icon.update_icon())
 
@@ -76,15 +78,15 @@ class SettingsBase(GladeGtk):
         else: self.hide()
         return True
 
-    def connect_feature_selector_to_config(self, combobox_id, config_property, default_value=None,
+    def connect_feature_selector_to_config(self, combobox, config_property, default_value=None,
             *args, on_changed=None, **xargs):
         if default_value:
             xargs["items"] = [("Default – %s"%id_to_string(self.target, default_value), default_value)]
-        fc = FeatureSelectorCombobox(self.target, self.builder.get_object(combobox_id), *args, **xargs)
+        fc = FeatureSelectorCombobox(self.target, combobox, *args, **xargs)
         self._connect_combobox_to_config(config_property, fc, on_changed)
 
-    def connect_value_selector_to_config(self, combobox_id, config_property, *args, on_changed=None, **xargs):
-        fc = FeatureValueCombobox(self.target, self.builder.get_object(combobox_id), *args, **xargs)
+    def connect_value_selector_to_config(self, combobox, config_property, *args, on_changed=None, **xargs):
+        fc = FeatureValueCombobox(self.target, combobox, *args, **xargs)
         self._connect_combobox_to_config(config_property, fc, on_changed)
 
     def _connect_combobox_to_config(self, config_property, fc, on_changed=None):
@@ -92,9 +94,9 @@ class SettingsBase(GladeGtk):
         fc.connect("changed", on_changed_)
         if on_changed: fc.connect("changed", on_changed)
 
-    def connect_adjustment_to_config(self, adjustment_id, config_property):
-        ad = self.builder.get_object(adjustment_id)
-        ad.connect("value-changed", config.connect_to_object(config_property, ad.get_value, ad.set_value))
+    def connect_adjustment_to_config(self, adjustment, config_property):
+        adjustment.connect("value-changed",
+            config.connect_to_object(config_property, adjustment.get_value, adjustment.set_value))
 
 
 class Settings(PowerControlMixin, TrayIconMixin, HotkeysMixin, PopupMenuSettings,
