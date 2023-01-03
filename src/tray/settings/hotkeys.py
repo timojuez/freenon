@@ -19,6 +19,7 @@ class _Shortcut:
         self.objects = []
         self.build()
         remove = self.attach(Gtk.Button("–"))
+        remove.set_hexpand(False)
         remove.connect("clicked", self.on_remove_clicked)
 
     def build(self): pass
@@ -28,6 +29,7 @@ class _Shortcut:
 
     def attach(self, obj):
         obj.show_all()
+        obj.set_hexpand(True)
         grid = self.app.builder.get_object(self.grid_id)
         if self.objects:
             grid.attach_next_to(obj, self.objects[-1], Gtk.PositionType.RIGHT, 1, 1)
@@ -135,7 +137,7 @@ class MouseGesture(_Shortcut):
         adj = Gtk.Adjustment()
         adj.configure(0, 0, 100, 1, 10, 1)
         max_step.set_adjustment(adj)
-        self.app.connect_adjustment_to_config(max_step, ("hotkeys", "mouse", 0, "max_step"))
+        self.app.connect_adjustment_to_config(adj, ("hotkeys", "mouse", self.i, "max_step"))
 
     def on_mouse_button_clicked(self, widget, i):
         def on_click(x, y, button, pressed):

@@ -246,7 +246,8 @@
                                   <object class="GtkAlignment">
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
-                                    <property name="left_padding">12</property>
+                                    <property name="left_padding">5</property>
+                                    <property name="right_padding">5</property>
                                     <child>
                                       <object class="GtkBox">
                                         <property name="visible">True</property>
@@ -284,7 +285,7 @@
                                               <object class="GtkLabel">
                                                 <property name="visible">True</property>
                                                 <property name="can_focus">False</property>
-                                                <property name="label" translatable="yes">Mouse sensivity</property>
+                                                <property name="label" translatable="yes">Mouse sensitivity</property>
                                               </object>
                                               <packing>
                                                 <property name="left_attach">2</property>
@@ -351,7 +352,8 @@
                                   <object class="GtkAlignment">
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
-                                    <property name="left_padding">12</property>
+                                    <property name="left_padding">5</property>
+                                    <property name="right_padding">5</property>
                                     <child>
                                       <object class="GtkBox">
                                         <property name="visible">True</property>
