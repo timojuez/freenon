@@ -64,7 +64,7 @@ class HotkeysMixin:
             try: modifiers.remove(listener.canonical(key))
             except (ValueError, KeyError): pass
             if done:
-                Gdk.Seat.ungrab(seat)
+                gtk(Gdk.Seat.ungrab)(seat)
                 listener.stop()
                 self._can_close = True
 
