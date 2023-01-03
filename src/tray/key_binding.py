@@ -207,9 +207,11 @@ class InputDeviceListener(Bindable, AbstractContextManager):
         if not LINUX: return
         buttons = [e["button"] for e in config["hotkeys"]["mouse"]]
         try:
-            if value:
-                for b in buttons: self._xgrab.grab_button(b)
-            else:
-                for b in buttons: self._xgrab.ungrab_button(b)
+            for b in buttons:
+                if b is None: continue
+                if value:
+                    self._xgrab.grab_button(b)
+                else:
+                    self._xgrab.ungrab_button(b)
         except: traceback.print_exc()
 
