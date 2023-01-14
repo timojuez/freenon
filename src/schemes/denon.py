@@ -764,15 +764,13 @@ class QuickSelectStore(features.ClientToServerFeatureMixin, _QuickSelect):
     
     # for server:
     def matches(self, data): return super().matches(data) and data.endswith("MEMORY")
-    def serialize_val(self, value): return f"{value} MEMORY"
-    def unserialize_val(self, data): return data.split(" ",1)[0]
+    def serialize_val(self, value): return f"{super().serialize_val(value)} MEMORY"
+    def unserialize_val(self, data): return super().unserialize_val(data.split(" ",1)[0])
     
     def on_change(self, val):
         super().on_change(val)
-        self.target.features.quick_select.set(val)
-        
-    def resend(self):
-        self.target.schedule(lambda quick_select: quick_select.resend(), requires=("quick_select",))
+        if isinstance(self.target, ServerType):
+            self.target.features.quick_select.set(val)
 
 
 @Denon.add_feature
