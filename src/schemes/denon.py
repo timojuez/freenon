@@ -268,6 +268,10 @@ class DynamicSelectFeature(SelectFeature):
         self.target.schedule(lambda *_: super(DynamicSelectFeature, self).remote_set(*args, **xargs),
             requires=(self.translation_source.id,))
 
+    def poll_on_dummy(self, *args, **xargs):
+        self.target.schedule(lambda *_: super(DynamicSelectFeature, self).poll_on_dummy(*args, **xargs),
+            requires=(self.translation_source.id,))
+
 
 class NumericFeature(DenonFeature):
     """ add UP/DOWN value decoding capability """
