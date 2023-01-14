@@ -440,7 +440,7 @@ class ClientToServerFeatureMixin:
         if isinstance(self.target, ClientType): return super().remote_set(*args, **xargs)
         else: raise ValueError("This is a unidirectional feature")
 
-    def resend(self): isinstance(self.target, ClientType) and super().resend()
+    def resend(self): pass
 
 
 class ServerToClientFeatureMixin:
