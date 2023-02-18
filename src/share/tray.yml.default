@@ -53,6 +53,7 @@ hotkeys:
         step: 3
         key: <ctrl>+<media_volume_up>
       - feature: '@muted_id'
+        step: 3
         key: <ctrl>+<media_volume_mute>
 
     # mouse gesture options
