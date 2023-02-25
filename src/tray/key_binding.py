@@ -81,6 +81,7 @@ class KeyBinding(TargetApp):
         self._y_ref, self._position_ref = y, vol
 
     def on_mouse_down(self, gesture, x, y):
+        if self.verbose >= 5: print(f"[{self.__class__.__name__}] Gesture activated:", gesture)
         self._new_value = None
         this = self._mouse_down_count = (self._mouse_down_count+1)%100
         self._position_ref = None
