@@ -85,8 +85,8 @@ class SocketClient(_IO, socket_tools.Client, AbstractClient):
     def mainloop_hook(self):
         if self.connected:
             super().mainloop_hook()
-            if self._pulse is not None and self._next_pulse < datetime.now():
-                self._next_pulse = datetime.now() + timedelta(seconds=30)
+            if self._pulse is not None and (now := datetime.now()) and self._next_pulse < now:
+                self._next_pulse = now + timedelta(seconds=30)
                 try: self.send(self._pulse)
                 except ConnectionError: pass
         else:
