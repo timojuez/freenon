@@ -32,6 +32,7 @@ class Base(AbstractMainloopManager):
 
     def enter(self):
         self._sockets["read"], self._sockets["write"] = socket.socketpair()
+        self._sockets["write"].settimeout(.2)
         self._connections = set()
         self.sel = selectors.DefaultSelector()
         self.sel.register(self._sockets["read"], selectors.EVENT_READ)
@@ -58,9 +59,9 @@ class Base(AbstractMainloopManager):
     def trigger_mainloop(self):
         if self._triggering.acquire(blocking=False):
             try: self._sockets["write"].sendall(b"\x00")
-            except:
+            except OSError as e:
+                print(f"[{self.__class__.__name__}] {e} in trigger_mainloop()", file=sys.stderr)
                 self._triggering.release()
-                raise
 
     def mainloop_quit(self):
         super().mainloop_quit()
