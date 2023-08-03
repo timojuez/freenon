@@ -11,8 +11,10 @@ try: import readline
 except ImportError: pass
 
 
-bright = lambda s: f"\033[1m{s}\033[0m" if sys.platform == "linux" else s
-dim = lambda s: f"\033[2m{s}\033[0m" if sys.platform == "linux" else s
+bashcol = lambda s, *codes: f"\033[%sm{s}\033[0m"%(';'.join(map(str, codes))) if sys.platform == "linux" else s
+bright = lambda s: bashcol(s, 1)
+dim = lambda s: bashcol(s, 1, 2)
+colour = lambda s: bashcol(s, 38, 5, 153)
 
 
 class CLI:
@@ -75,8 +77,9 @@ class CLI:
 
     def prompt(self):
         self.target.bind(on_disconnected=self.on_disconnected)
+        uri = ":".join(map(colour, self.target.uri.split(":")))
         ic = InteractiveHifish(
-            prompt="%s > "%self.target.uri, compiler=self.compiler, locals=self.compiler.env)
+            prompt=f"{uri} > ", compiler=self.compiler, locals=self.compiler.env)
         ic.interact(banner="", exitmsg="")
 
     def parse_file(self):
