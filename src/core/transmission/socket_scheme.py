@@ -76,7 +76,7 @@ class SocketClient(_IO, socket_tools.Client, AbstractClient):
         with self._connect_lock:
             if self.connected: return
             try: super().connect(timeout=5)
-            except (ConnectionError, socket.timeout, socket.gaierror, socket.herror, OSError) as e:
+            except OSError as e:
                 raise ConnectionError(e)
             else: self.on_connect()
 
@@ -93,7 +93,7 @@ class SocketClient(_IO, socket_tools.Client, AbstractClient):
                 except ConnectionError: pass
         else:
             try: self.connect()
-            except ConnectionError: return self._stoploop.wait(3)
+            except OSError: return self._stoploop.wait(3)
 
 
 class SocketServer(_IO, socket_tools.Server, AbstractServer):

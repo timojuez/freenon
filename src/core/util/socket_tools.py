@@ -71,7 +71,8 @@ class Base(AbstractMainloopManager):
         events = self.sel.select(5)
         for key, mask in events:
             if key.fileobj is self._sockets["read"]: # called trigger_mainloop()
-                self._sockets["read"].recv(1)
+                try: self._sockets["read"].recv(1024)
+                except OSError: pass
                 self._triggering.release()
                 break
             callback = key.data
@@ -79,7 +80,7 @@ class Base(AbstractMainloopManager):
 
     def connection(self, conn, mask):
         try: data = conn.recv(1000)
-        except ConnectionError as e:
+        except OSError as e:
             print(e, file=sys.stderr)
             data = None
         if data:
@@ -92,7 +93,7 @@ class Base(AbstractMainloopManager):
     def write(self, msg, conn=None):
         if conn:
             try: conn.sendall(msg)
-            except (OSError, ConnectionError): self.remove_socket(conn)
+            except OSError: self.remove_socket(conn)
             except: traceback.print_exc()
         else:
             for conn in self._connections.copy(): self.write(msg, conn)
