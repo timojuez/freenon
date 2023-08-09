@@ -33,7 +33,7 @@ def get_screen_size(display):
 
 class KeyBinding(TargetApp):
     """ Mixin class for managing volume up/down hot keys and mouse gesture """
-    _new_value = None
+    _mouse_gesture_thread_data = None, None
     _position_ref = None
     _y_ref = None
     _mouse_down_count = 0
@@ -82,7 +82,7 @@ class KeyBinding(TargetApp):
 
     def on_mouse_down(self, gesture, x, y):
         if self.verbose >= 5: print(f"[{self.__class__.__name__}] Gesture activated:", gesture)
-        self._new_value = None
+        self._mouse_gesture_thread_data = None, None
         this = self._mouse_down_count = (self._mouse_down_count+1)%100
         self._position_ref = None
         def func(f):
@@ -98,7 +98,7 @@ class KeyBinding(TargetApp):
         if self._position_ref is None: return
         screen_height = get_screen_size(Gdk.Display.get_default())[1]
         new_value = self._position_ref-int((y-self._y_ref)/screen_height*gesture["conf"]["sensitivity"])
-        if new_value == self._new_value: return
+        if self._mouse_gesture_thread_data == (new_value, gesture): return
         try: max_ = min(f.max, f.get()+Decimal(gesture["conf"]["max_step"]))
         except ConnectionError: return
         min_ = f.min
@@ -106,9 +106,9 @@ class KeyBinding(TargetApp):
             # mouse has been moved to an illegal point
             new_value = max(min_, min(max_, new_value))
             self.set_position_reference(y, new_value)
-        if new_value == self._new_value: return
+        if self._mouse_gesture_thread_data == (new_value, gesture): return
         with self._set_feature_lock:
-            self._new_value = new_value
+            self._mouse_gesture_thread_data = new_value, gesture
             self._feature_step.set()
 
     def mouse_gesture_thread(self):
@@ -116,8 +116,8 @@ class KeyBinding(TargetApp):
             self._feature_step.wait()
             with self._set_feature_lock:
                 self._feature_step.clear()
-                new_value = self._new_value
-            if f := self.target.features.get(self.get_current_gesture_f_id()):
+                new_value, gesture = self._mouse_gesture_thread_data
+            if f := self.target.features.get(gesture["f_id"]):
                 try: self._update_feature_value(f, new_value)
                 except ConnectionError: pass
 
