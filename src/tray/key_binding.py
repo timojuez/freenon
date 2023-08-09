@@ -47,7 +47,7 @@ class KeyBinding(TargetApp):
             on_mouse_up=self.on_mouse_up,
             on_activated_mouse_move=self.on_activated_mouse_move)
         self._feature_changed = Event()
-        self._feature_step = Event()
+        self._mouse_gesture_thread_evt = Event()
         self._set_feature_lock = Lock()
         self.target.bind(on_feature_change=self.on_gesture_feature_change)
         Thread(target=self.mouse_gesture_thread, daemon=True, name="key_binding").start()
@@ -109,13 +109,13 @@ class KeyBinding(TargetApp):
         if self._mouse_gesture_thread_data == (new_value, gesture): return
         with self._set_feature_lock:
             self._mouse_gesture_thread_data = new_value, gesture
-            self._feature_step.set()
+            self._mouse_gesture_thread_evt.set()
 
     def mouse_gesture_thread(self):
         while True:
-            self._feature_step.wait()
+            self._mouse_gesture_thread_evt.wait()
             with self._set_feature_lock:
-                self._feature_step.clear()
+                self._mouse_gesture_thread_evt.clear()
                 new_value, gesture = self._mouse_gesture_thread_data
             if f := self.target.features.get(gesture["f_id"]):
                 try: self._update_feature_value(f, new_value)
