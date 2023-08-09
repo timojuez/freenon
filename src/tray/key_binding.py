@@ -78,6 +78,7 @@ class KeyBinding(TargetApp):
 
     def set_position_reference(self, y, vol):
         """ link a y-coordinate to a feature value """
+        if self.verbose >= 6: print(f"[{self.__class__.__name__}] Setting new mouse position reference")
         self._y_ref, self._position_ref = y, vol
 
     def on_mouse_down(self, gesture, x, y):
@@ -99,8 +100,13 @@ class KeyBinding(TargetApp):
         screen_height = get_screen_size(Gdk.Display.get_default())[1]
         new_value = self._position_ref-int((y-self._y_ref)/screen_height*gesture["conf"]["sensitivity"])
         if self._mouse_gesture_thread_data == (new_value, gesture): return
-        try: max_ = min(f.max, f.get()+Decimal(gesture["conf"]["max_step"]))
+        max_step = Decimal(gesture["conf"]["max_step"])
+        try: max_ = f.get()+max_step
         except ConnectionError: return
+        if self.verbose >= 1 and new_value > max_:
+            print(f"[{self.__class__.__name__}] "
+                f"Mouse gesture: New value {new_value} exceeds max step ({max_step})", file=sys.stderr)
+        max_ = min(f.max, max_)
         min_ = f.min
         if new_value > max_ or new_value < min_:
             # mouse has been moved to an illegal point
