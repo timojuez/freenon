@@ -114,14 +114,14 @@ class KeyBinding(TargetApp):
     def mouse_gesture_thread(self):
         while True:
             self._feature_step.wait()
+            with self._set_feature_lock:
+                self._feature_step.clear()
+                new_value = self._new_value
             if f := self.target.features.get(self.get_current_gesture_f_id()):
-                try: self._update_feature_value(f)
+                try: self._update_feature_value(f, new_value)
                 except ConnectionError: pass
 
-    def _update_feature_value(self, f):
-        with self._set_feature_lock:
-            self._feature_step.clear()
-            new_value = self._new_value
+    def _update_feature_value(self, f, new_value):
         if new_value in (None, f.get()): return
         self._feature_changed.clear()
         try: f.remote_set(new_value)
