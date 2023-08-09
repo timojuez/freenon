@@ -47,7 +47,9 @@ class _IO(socket_tools.Base):
 
     def schedule(self, *args, **xargs):
         try: return super().schedule(*args, **xargs)
-        finally: self.trigger_mainloop()
+        finally:
+            try: self.trigger_mainloop()
+            except (OSError, RuntimeError): pass
 
     def handle_uri_path(self, *args, **xargs):
         super().handle_uri_path(*args, **xargs)

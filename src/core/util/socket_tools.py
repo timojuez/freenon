@@ -58,7 +58,10 @@ class Base(AbstractMainloopManager):
 
     def trigger_mainloop(self):
         if self._triggering.acquire(blocking=False):
-            try: self._sockets["write"].sendall(b"\x00")
+            try: wsock = self._sockets["write"]
+            except KeyError:
+                raise RuntimeError("No write socket found. Mainloop must be running when calling this method.")
+            try: wsock.sendall(b"\x00")
             except OSError as e:
                 print(f"[{self.__class__.__name__}] {e} in trigger_mainloop()", file=sys.stderr)
                 self._triggering.release()
