@@ -66,6 +66,9 @@ class Base(AbstractMainloopManager):
             except OSError as e:
                 with suppress(RuntimeError): self._triggering.release()
                 print(f"[{self.__class__.__name__}] {e} in trigger_mainloop()", file=sys.stderr)
+            except:
+                with suppress(RuntimeError): self._triggering.release()
+                raise
 
     def mainloop_quit(self):
         super().mainloop_quit()
