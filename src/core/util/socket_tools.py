@@ -5,6 +5,7 @@ The function "send" sends dicts.
 
 import selectors, socket, json, sys, traceback
 from threading import Thread, Lock
+from contextlib import suppress
 from . import AbstractMainloopManager
 
 
@@ -60,11 +61,12 @@ class Base(AbstractMainloopManager):
         if self._triggering.acquire(blocking=False):
             try: wsock = self._sockets["write"]
             except KeyError:
+                with suppress(RuntimeError): self._triggering.release()
                 raise RuntimeError("No write socket found. Mainloop must be running when calling this method.")
             try: wsock.sendall(b"\x00")
             except OSError as e:
+                with suppress(RuntimeError): self._triggering.release()
                 print(f"[{self.__class__.__name__}] {e} in trigger_mainloop()", file=sys.stderr)
-                self._triggering.release()
 
     def mainloop_quit(self):
         super().mainloop_quit()
@@ -73,11 +75,11 @@ class Base(AbstractMainloopManager):
     def mainloop_hook(self):
         super().mainloop_hook()
         events = self.sel.select(5)
+        with suppress(RuntimeError): self._triggering.release()
         for key, mask in events:
             if key.fileobj is self._sockets["read"]: # called trigger_mainloop()
                 try: self._sockets["read"].recv(1024)
                 except OSError: pass
-                self._triggering.release()
                 break
             callback = key.data
             callback(key.fileobj, mask)
