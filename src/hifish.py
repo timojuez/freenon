@@ -14,7 +14,7 @@ except ImportError: pass
 bashcol = lambda s, *codes: f"\033[%sm{s}\033[0m"%(';'.join(map(str, codes))) if sys.platform == "linux" else s
 bright = lambda s: bashcol(s, 1)
 dim = lambda s: bashcol(s, 1, 2)
-colour = lambda s: bashcol(s, 38, 5, 153)
+colour = lambda s: bashcol(s, 38, 5, 172)
 
 
 class CLI:
