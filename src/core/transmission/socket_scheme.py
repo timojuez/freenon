@@ -64,11 +64,17 @@ class SocketClient(_IO, socket_tools.Client, AbstractClient):
     init_args_help = ("//SERVER_IP", "SERVER_PORT")
     _pulse = "" # this is being sent regularly to keep connection
     _next_pulse = datetime.fromtimestamp(0)
+    _reconnects = 0
 
     def __init__(self, host, port=PORT, *args, **xargs):
         if host and host.startswith("//"): host = host[2:]
         super().__init__(host, port, *args, **xargs)
         self._connect_lock = Lock()
+
+    def read(self, *args, **xargs):
+        super().read(*args, **xargs)
+        self._pending_pulses = 0
+        self._reconnects = 0
 
     def send(self, cmd):
         if not self.connected: raise BrokenPipeError(f"{self} not connected to {self.uri}.")
@@ -78,6 +84,7 @@ class SocketClient(_IO, socket_tools.Client, AbstractClient):
         with self._connect_lock:
             if self.connected: return
             super().connect(timeout=5)
+            self._pending_pulses = 0
             self.on_connect()
 
     def disconnect(self, *args, **xargs):
@@ -88,10 +95,22 @@ class SocketClient(_IO, socket_tools.Client, AbstractClient):
         if self.connected:
             super().mainloop_hook()
             if self._pulse is not None and (now := datetime.now()) and self._next_pulse < now:
-                self._next_pulse = now + timedelta(seconds=30)
+                # send ping
+                self._next_pulse = now + timedelta(seconds=5)
+                self._pending_pulses += 1
                 try: self.send(self._pulse)
                 except ConnectionError: pass
+                # check pong
+                if self._pending_pulses > 2:
+                    print(f"[{self.__class__.__name__}] Pulse timed out. Reconnecting.", file=sys.stderr)
+                    self.disconnect()
+                    self._reconnects += 1
         else:
+            delay = {0:0, 1:0, 2:5, 3:10, 4:30}.get(self._reconnects, 60) # map "_reconnects" to delay (s)
+            if delay > 0:
+                print(f"[{self.__class__.__name__}] Connecting in {delay} s", file=sys.stderr)
+                if self._stoploop.wait(delay): # sleep
+                    return # mainloop requested to stop
             try: self.connect()
             except OSError: return self._stoploop.wait(3)
 
