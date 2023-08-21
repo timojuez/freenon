@@ -13,10 +13,10 @@ class Base(TargetApp, TargetController):
 
     def __init__(self, *args, **xargs):
         super().__init__(*args, **xargs)
-        self.target.preload_features.update((config.source, config.power))
-        self.target.preload_features.add("name")
+        self.target.preload_shared_vars.update((config.source, config.power))
+        self.target.preload_shared_vars.add("name")
         self.target.bind(
-            on_feature_change = self.on_target_feature_change,
+            on_shared_var_change = self.on_target_shared_var_change,
             on_disconnected = self.close_power_notifications)
         self._power_notifications = []
 
@@ -30,12 +30,12 @@ class Base(TargetApp, TargetController):
         super().on_stop_playing()
         # execute on_idle() if target is not playing
         try: target_playing = (
-            self.target.features[config.idle].is_set() and self.target.features[config.idle].get() == False
-            and self.target.features[config.power].is_set() and self.target.features[config.power].get() == True
+            self.target.shared_vars[config.idle].is_set() and self.target.shared_vars[config.idle].get() == False
+            and self.target.shared_vars[config.power].is_set() and self.target.shared_vars[config.power].get() == True
             )
         except (ConnectionError, KeyError): target_playing = False
         if not target_playing: self.on_idle()
-        try: f = self.target.features[config.idle]
+        try: f = self.target.shared_vars[config.idle]
         except KeyError: pass
         else:
             if not f.is_set():
@@ -48,7 +48,7 @@ class Base(TargetApp, TargetController):
         """ when starting to play something locally or on amp """
         pass
 
-    def on_target_feature_change(self, f_id, value):
+    def on_target_shared_var_change(self, f_id, value):
         if f_id == config.power:
             self.on_target_power_change(value)
         elif f_id == config.idle:
@@ -80,10 +80,10 @@ class PowerOnMixin:
 
     def poweron(self):
         try:
-            if (source := self.target.features.get(config.source)) and config["target"]["source"]:
+            if (source := self.target.shared_vars.get(config.source)) and config["target"]["source"]:
                 try: source.remote_set(config["target"]["source"])
                 except ValueError: traceback.print_exc()
-            if power := self.target.features.get(config.power): power.remote_set(True)
+            if power := self.target.shared_vars.get(config.power): power.remote_set(True)
         except ConnectionError: pass
 
     def ask_poweron(self):
@@ -152,7 +152,7 @@ class PowerOffMixin:
                 self._poweroff_n.update("Power off %s"%name.get())
                 self._poweroff_n.show()
         requires = ["name", config.power]
-        if config.source in self.target.features: requires.append(config.source)
+        if config.source in self.target.shared_vars: requires.append(config.source)
         self.target.schedule(func, requires=requires)
 
     def _can_poweroff(self, power, source):
@@ -162,8 +162,8 @@ class PowerOffMixin:
     def poweroff(self):
         """ on suspend/shutdown """
         if not config["power_control"]["power_off_on_shutdown"]: return
-        power = self.target.features.get(config.power)
-        source = self.target.features.get(config.source)
+        power = self.target.shared_vars.get(config.power)
+        source = self.target.shared_vars.get(config.source)
         try:
             if self._can_poweroff(power, source): power.remote_set(False)
         except ConnectionError: pass
@@ -171,7 +171,7 @@ class PowerOffMixin:
     def _poweroff(self):
         """ called by idle notification """
         requires = [config.power]
-        if config.source in self.target.features: requires.append(config.source)
+        if config.source in self.target.shared_vars: requires.append(config.source)
         self.target.schedule(
             lambda power, source=None: self._can_poweroff(power, source) and power.remote_set(False),
             requires=requires)

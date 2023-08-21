@@ -64,7 +64,7 @@ class AbstractMainloopManager:
         pass
 
     def mainloop(self):
-        """ listens on server for events and calls on_feature_change. Return when connection closed """
+        """ listens on server for events and calls on_shared_var_change. Return when connection closed """
         self.enter()
         try:
             self._mainloop()
@@ -72,7 +72,7 @@ class AbstractMainloopManager:
             self.exit()
 
     def _mainloop(self):
-        """ listens on server for events and calls on_feature_change. Return when connection closed """
+        """ listens on server for events and calls on_shared_var_change. Return when connection closed """
         self._stoploop.clear()
         while not self._stoploop.is_set(): self.mainloop_hook()
 

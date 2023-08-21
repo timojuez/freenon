@@ -1,6 +1,6 @@
 #!/usr/bin/env -S python3 -m hificon.hifish
 
-def on_feature_change(key, value):
+def on_shared_var_change(key, value):
     print("\nChanged %s to %s."%(key,value))
 
 def volume_prompt():
@@ -10,6 +10,6 @@ def volume_prompt():
         $volume = Decimal(newvol)
 
 if __name__ == "__main__":
-    $bind(on_feature_change=on_feature_change)
+    $bind(on_shared_var_change=on_shared_var_change)
     volume_prompt()
 

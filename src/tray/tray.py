@@ -4,7 +4,7 @@ from gi.repository import GLib, Gtk, Gdk, AppIndicator3, GdkPixbuf, Gio
 import sys, math, pkgutil, os, tempfile
 from threading import Timer
 from decimal import Decimal
-from ..core import features
+from ..core import shared_vars
 from ..core.util import Bindable
 from ..core.util.async_widget import bind_widget_to_value
 from ..info import NAME, AUTHOR, URL, VERSION, COPYRIGHT
@@ -30,7 +30,7 @@ class ScalePopup(HideOnUnfocusMixin, GladeGtk):
     def __init__(self, target, *args, **xargs):
         super().__init__(*args, **xargs)
         self.target = target
-        self._current_feature = None
+        self._current_var = None
 
         self.window = self.builder.get_object("window")
         self.width, self.height = self.window.get_size()
@@ -40,12 +40,12 @@ class ScalePopup(HideOnUnfocusMixin, GladeGtk):
         self.image = self.builder.get_object("image")
         self.adj = self.builder.get_object("adjustment")
         
-        for f in self.target.features.values(): f.bind(
-            gtk(lambda *args, f=f, **xargs: f==self._current_feature and self.on_value_change(*args,**xargs)))
+        for var in self.target.shared_vars.values(): var.bind(
+            gtk(lambda *args, var=var, **xargs: var==self._current_var and self.on_value_change(*args,**xargs)))
 
     def set_value(self, value):
         self.scale.set_value(value)
-        self.label.set_text(str(self._current_feature))
+        self.label.set_text(str(self._current_var))
         
     @gtk
     def set_image(self, path):
@@ -57,14 +57,14 @@ class ScalePopup(HideOnUnfocusMixin, GladeGtk):
     def visible(self): return self.window.get_visible()
     
     @gtk
-    def show(self, f):
+    def show(self, var):
         self.on_value_change, self.on_widget_change = bind_widget_to_value(
-            f.get, f.remote_set, self.scale.get_value,
-            lambda value: f==self._current_feature and self.set_value(value))
-        self.title.set_text(f.name)
-        self.adj.set_lower(f.min)
-        self.adj.set_upper(f.max)
-        self._current_feature = f
+            var.get, var.remote_set, self.scale.get_value,
+            lambda value: var==self._current_var and self.set_value(value))
+        self.title.set_text(var.name)
+        self.adj.set_lower(var.min)
+        self.adj.set_upper(var.max)
+        self._current_var = var
         self.on_value_change()
         super().show()
 
@@ -77,11 +77,11 @@ class MenuMixin(TargetApp):
         self._footer_items = []
         self._menu = Gtk.Menu()
 
-        # header features
-        for f in self.target.features.values():
-            try: item = self.add_feature(f, True)
+        # header vars
+        for var in self.target.shared_vars.values():
+            try: item = self.add_shared_var(var, True)
             except TypeError: pass
-            else: self._header_items[f] = item
+            else: self._header_items[var] = item
 
         item_disconnected = Gtk.MenuItem("Connecting ...", sensitive=False)
         self._footer_items.append(item_disconnected)
@@ -93,17 +93,17 @@ class MenuMixin(TargetApp):
         self.target.bind(on_disconnected = gtk(item_more.hide))
         submenu = Gtk.Menu()
         categories = {cat: {"menu":Gtk.Menu(), "item":Gtk.MenuItem(cat, no_show_all=True)}
-            for cat in self.target.feature_categories}
+            for cat in self.target.shared_var_categories}
         for d in categories.values():
             submenu.append(d["item"])
             d["item"].set_submenu(d["menu"])
             self.target.bind(on_disconnected=gtk(lambda i=d["item"]: i.hide()))
-        for key, f in self.target.features.items():
-            d = categories[f.category]
-            try: d["menu"].append(self.add_feature(f, False))
+        for key, var in self.target.shared_vars.items():
+            d = categories[var.category]
+            try: d["menu"].append(self.add_shared_var(var, False))
             except TypeError: pass
-            else: f.bind(on_set = gtk(lambda i=d["item"]: i.show()))
-        self.target.preload_features[-10].update(self.target.features)
+            else: var.bind(on_set = gtk(lambda i=d["item"]: i.show()))
+        self.target.preload_shared_vars[-10].update(self.target.shared_vars)
         item_more.set_submenu(submenu)
         self._footer_items.append(item_more)
 
@@ -139,68 +139,68 @@ class MenuMixin(TargetApp):
 
         for e in self._footer_items+list(self._header_items.values()): e.show_all()
 
-    def on_menu_settings_change(self, features):
-        self.target.preload_features[2].clear()
-        for f in features: self.target.preload_features[2].add(f.id)
-        self._refill_menu(features)
+    def on_menu_settings_change(self, shared_vars):
+        self.target.preload_shared_vars[2].clear()
+        for var in shared_vars: self.target.preload_shared_vars[2].add(var.id)
+        self._refill_menu(shared_vars)
 
     @gtk
-    def _refill_menu(self, header_features):
+    def _refill_menu(self, header_vars):
         for child in self._menu.get_children(): self._menu.remove(child)
-        for f in header_features:
-            if item := self._header_items.get(f, None): self._menu.append(item)
+        for var in header_vars:
+            if item := self._header_items.get(var, None): self._menu.append(item)
         for item in self._footer_items: self._menu.append(item)
 
-    def add_feature(self, f, compact=True):
-        """ compact: If true, SelectFeatures show the value in the label.
-        and BoolFeatures are Checkboxes without submenus. """
-        if isinstance(f, features.BoolFeature): item = self._add_bool_feature(f, compact)
-        elif isinstance(f, features.NumericFeature): item = self._add_numeric_feature(f, compact)
-        elif isinstance(f, features.SelectFeature): item = self._add_select_feature(f, compact)
-        else: raise TypeError(f"Unsupported feature type for {f.id}: {f.type}")
+    def add_shared_var(self, var, compact=True):
+        """ compact: If true, SelectVars show the value in the label.
+        and BoolVars are Checkboxes without submenus. """
+        if isinstance(var, shared_vars.BoolVar): item = self._add_bool_var(var, compact)
+        elif isinstance(var, shared_vars.NumericVar): item = self._add_numeric_var(var, compact)
+        elif isinstance(var, shared_vars.SelectVar): item = self._add_select_var(var, compact)
+        else: raise TypeError(f"Unsupported variable type for {var.id}: {var.type}")
         item.set_no_show_all(True)
-        f.bind(on_set = gtk(item.show))
-        f.bind(on_unset = gtk(item.hide))
+        var.bind(on_set = gtk(item.show))
+        var.bind(on_unset = gtk(item.hide))
         return item
 
-    def _add_bool_feature(self, f, compact):
-        if not compact: return self._add_select_feature(f, compact)
-        item = Gtk.CheckMenuItem(f.name)
+    def _add_bool_var(self, var, compact):
+        if not compact: return self._add_select_var(var, compact)
+        item = Gtk.CheckMenuItem(var.name)
         on_value_change, on_widget_change = bind_widget_to_value(
-            lambda: bool(f.get()), f.remote_set, item.get_active, item.set_active)
-        f.bind(gtk(on_value_change))
+            lambda: bool(var.get()), var.remote_set, item.get_active, item.set_active)
+        var.bind(gtk(on_value_change))
         item.connect("toggled", lambda event:on_widget_change())
         return item
 
-    def _add_numeric_feature(self, f, compact):
-        item = Gtk.MenuItem(f.name)
-        def set(value): item.set_label(f"{f.name}   {f}")
-        f.bind(gtk(set))
-        item.connect("activate", lambda event:self.scale_popup.show(f))
+    def _add_numeric_var(self, var, compact):
+        item = Gtk.MenuItem(var.name)
+        def set(value): item.set_label(f"{var.name}   {var}")
+        var.bind(gtk(set))
+        item.connect("activate", lambda event:self.scale_popup.show(var))
         return item
 
-    def _add_select_feature(self, f, compact):
+    def _add_select_var(self, var, compact):
         submenu = Gtk.Menu()
-        item = Gtk.MenuItem(f.name, submenu=submenu)
-        if compact: f.bind(gtk(item.set_label))
-        f.bind(gtk(lambda value:self._refill_submenu(f, value, submenu, compact)))
+        item = Gtk.MenuItem(var.name, submenu=submenu)
+        if compact: var.bind(gtk(item.set_label))
+        var.bind(gtk(lambda value:self._refill_submenu(var, value, submenu, compact)))
         return item
 
-    def _refill_submenu(self, f, value, submenu, compact):
+    def _refill_submenu(self, var, value, submenu, compact):
         submenu.foreach(lambda child: child.destroy())
         if compact:
-            submenu.append(Gtk.MenuItem(f.name, sensitive=False))
+            submenu.append(Gtk.MenuItem(var.name, sensitive=False))
             submenu.append(Gtk.SeparatorMenuItem())
-        if value not in f.options:
+        if value not in var.options:
             submenu.append(Gtk.CheckMenuItem(value, sensitive=False, active=True, draw_as_radio=True))
-        for o in f.options:
+        for o in var.options:
             active = value==o
             label = {True: "On", False: "Off"}.get(o, o)
             item = Gtk.CheckMenuItem(label, active=active, draw_as_radio=True)
             def on_activate(item, o=o, active=active):
                 if item.get_active() != active:
                     item.set_active(active)
-                    f.remote_set(o)
+                    var.remote_set(o)
             item.connect("activate", on_activate)
             submenu.append(item)
         submenu.show_all()
@@ -215,28 +215,28 @@ class Icon(Bindable):
         self.target.bind(
             on_connect=self.update_icon,
             on_disconnected=self.set_icon,
-            on_feature_change=self.on_feature_change)
-        self.target.preload_features[10].update(self.relevant_features())
+            on_shared_var_change=self.on_shared_var_change)
+        self.target.preload_shared_vars[10].update(self.relevant_vars())
 
-    def relevant_features(self): return config.tray_feature, config.muted, config.power
+    def relevant_vars(self): return config.tray_var, config.muted, config.power
 
-    def on_feature_change(self, f_id, value, *args): # bound to target
-        if f_id in self.relevant_features(): self.update_icon()
+    def on_shared_var_change(self, var_id, value, *args): # bound to target
+        if var_id in self.relevant_vars(): self.update_icon()
 
     def update_icon(self):
-        f = self.target.features.get(config.tray_feature)
-        if (power := self.target.features.get(config.power)) and power.is_set() and power.get() == False:
+        var = self.target.shared_vars.get(config.tray_var)
+        if (power := self.target.shared_vars.get(config.power)) and power.is_set() and power.get() == False:
             return self.set_icon("power")
-        if (muted := self.target.features.get(config.muted)) and muted.is_set() and muted.get():
+        if (muted := self.target.shared_vars.get(config.muted)) and muted.is_set() and muted.get():
             return self.set_icon("audio-volume-muted")
-        if f and f.is_set():
-            f_val = f.get()
-            if not (f.min <= f_val <= f.max):
+        if var and var.is_set():
+            var_val = var.get()
+            if not (var.min <= var_val <= var.max):
                 sys.stderr.write(
-                    f"[{self.__class__.__name__}] WARNING: Value out of bounds: {f_val} for {f.id}.\n")
-            if f_val <= f.min: return self.set_icon("audio-volume-muted")
+                    f"[{self.__class__.__name__}] WARNING: Value out of bounds: {var_val} for {var.id}.\n")
+            if var_val <= var.min: return self.set_icon("audio-volume-muted")
             icons = ["audio-volume-low", "audio-volume-medium", "audio-volume-high"]
-            icon_idx = math.ceil(min(1, (f_val-f.min)/(f.max-f.min))*len(icons))-1
+            icon_idx = math.ceil(min(1, (var_val-var.min)/(var.max-var.min))*len(icons))-1
             return self.set_icon(icons[icon_idx])
         self.set_icon("logo")
 
@@ -312,7 +312,7 @@ class TrayMixin(Tray):
 
     def __init__(self, *args, **xargs):
         super().__init__(*args,**xargs)
-        self.target.preload_features.update((config.tray_feature, config.muted))
+        self.target.preload_shared_vars.update((config.tray_var, config.muted))
         self.icon = Icon(self.target)
         self.icon.bind(on_change = self.on_icon_change)
         self.show()
@@ -329,21 +329,21 @@ class TrayMixin(Tray):
         self.scale_popup.set_image(path)
         self.set_icon(path, name)
 
-    def _save_set_feature_to_relative_value(self, f_id, add):
-        f = self.target.features.get(f_id)
-        if not f or not f.is_set(): return
+    def _save_set_shared_var_to_relative_value(self, f_id, add):
+        var = self.target.shared_vars.get(f_id)
+        if not var or not var.is_set(): return
         try:
-            value = f.get()+add
-            snapped_value = min(max(f.min, value), f.max)
-            f.remote_set(snapped_value)
+            value = var.get()+add
+            snapped_value = min(max(var.min, value), var.max)
+            var.remote_set(snapped_value)
         except ConnectionError: pass
 
     def on_scroll_up(self, steps):
-        self._save_set_feature_to_relative_value(
-            config.tray_feature, steps*Decimal(config["tray"]["scroll_delta"]))
+        self._save_set_shared_var_to_relative_value(
+            config.tray_var, steps*Decimal(config["tray"]["scroll_delta"]))
 
     def on_scroll_down(self, steps):
-        self._save_set_feature_to_relative_value(
-            config.tray_feature, steps*-1*Decimal(config["tray"]["scroll_delta"]))
+        self._save_set_shared_var_to_relative_value(
+            config.tray_var, steps*-1*Decimal(config["tray"]["scroll_delta"]))
 
 

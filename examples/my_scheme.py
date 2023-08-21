@@ -5,7 +5,7 @@
 """
 
 from decimal import Decimal
-from hificon.core import SocketScheme, features
+from hificon.core import SocketScheme, shared_vars
 from hificon import register_scheme, hifish
 
 
@@ -17,8 +17,8 @@ class MySocketScheme(SocketScheme):
     description = "My custom scheme"
 
 
-@MySocketScheme.add_feature(overwrite=True)
-class Power(features.BoolFeature):
+@MySocketScheme.shared_var(overwrite=True)
+class Power(shared_vars.BoolVar):
     call = "?pwr"
 
     def serialize(self, value): return "!pwr=1" if value else "!pwr=0"
@@ -28,8 +28,8 @@ class Power(features.BoolFeature):
     def set_on_server(self, value): self.set(value)
 
 
-@MySocketScheme.add_feature
-class Value(features.DecimalFeature):
+@MySocketScheme.shared_var
+class Value(shared_vars.DecimalVar):
     min = 0
     max = 10
     call = "get value"

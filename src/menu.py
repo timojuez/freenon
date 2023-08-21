@@ -1,7 +1,7 @@
 import argparse, os, pkgutil, tempfile, sys, traceback
 from decimal import Decimal
 from .core.util.async_widget import bind_widget_to_value
-from .core import features
+from .core import shared_vars
 from .core.config import config, DictConfig, CONFDIR
 from . import Target, get_schemes, NAME, VERSION, AUTHOR, COPYRIGHT
 
@@ -35,33 +35,33 @@ class TabPanel(ScrollView):
     def __init__(self, target):
         self.target = target
         super().__init__()
-        self.features = {}
+        self.shared_vars = {}
         pinned = {True:[], False:[]}
-        for f in self.target.features.values(): pinned[f.id in self.config["pinned"]].append(f)
-        self._features_stack = [*pinned[True], *pinned[False]]
-        self.addFeaturesFromStack(chunksize=50, repeat=None)
+        for f in self.target.shared_vars.values(): pinned[var.id in self.config["pinned"]].append(var)
+        self._vars_stack = [*pinned[True], *pinned[False]]
+        self.addSharedVarsFromStack(chunksize=50, repeat=None)
         
-    def addFeaturesFromStack(self, *_, chunksize=1, repeat=.1):
-        chunk, self._features_stack = self._features_stack[:chunksize], self._features_stack[chunksize:]
-        for f in chunk:
-            print("adding %s"%f.name)
-            Clock.schedule_once(lambda *_, f=f: self.addFeature(f), 0)
-        if repeat and self._features_stack: Clock.schedule_once(self.addFeaturesFromStack, repeat)
+    def addSharedVarsFromStack(self, *_, chunksize=1, repeat=.1):
+        chunk, self._vars_stack = self._vars_stack[:chunksize], self._vars_stack[chunksize:]
+        for var in chunk:
+            print("adding %s"%var.name)
+            Clock.schedule_once(lambda *_, var=var: self.addSharedVar(var), 0)
+        if repeat and self._vars_stack: Clock.schedule_once(self.addSharedVarsFromStack, repeat)
 
-    def addFeature(self, f):
-        self.target.preload_features.add(f.id)
+    def addSharedVar(self, var):
+        self.target.preload_shared_vars.add(var.id)
         if self.target.connected:
-            try: f.async_poll()
+            try: var.async_poll()
             except ConnectionError: pass
-        row = FeatureRow()
-        row.ids.text.text = f.name
-        row.ids.checkbox.active = f.id in self.config["pinned"]
+        row = VarRow()
+        row.ids.text.text = var.name
+        row.ids.checkbox.active = var.id in self.config["pinned"]
 
-        if f.type == bool: w = self.addBoolFeature(f)
-        elif f.type == str: w = self.addSelectFeature(f)
-        elif f.type == int: w = self.addIntFeature(f)
-        elif f.type == Decimal: w = self.addDecimalFeature(f)
-        else: return print("WARNING: Not implemented: Feature type '%s'"%f.type, file=sys.stderr)
+        if var.type == bool: w = self.addBoolVar(var)
+        elif var.type == str: w = self.addSelectVar(var)
+        elif var.type == int: w = self.addIntVar(var)
+        elif var.type == Decimal: w = self.addDecimalVar(var)
+        else: return print("WARNING: Not implemented: Shared var type '%s'"%var.type, file=sys.stderr)
         if w: row.ids.content.add_widget(w)
         
         def on_checkbox(checkbox, active):
@@ -70,34 +70,34 @@ class TabPanel(ScrollView):
             self.config.save()
         row.ids.checkbox.bind(active=on_checkbox)
 
-        self.features[f.id] = row
+        self.shared_vars[var.id] = row
         hide_widget(row)
-        f.bind(on_set=lambda: Clock.schedule_once(lambda *_: show_widget(row), 0))
-        f.bind(on_unset=lambda: Clock.schedule_once(lambda *_: hide_widget(row), 0))
-        self.add_filtered(f.id, row)
+        var.bind(on_set=lambda: Clock.schedule_once(lambda *_: show_widget(row), 0))
+        var.bind(on_unset=lambda: Clock.schedule_once(lambda *_: hide_widget(row), 0))
+        self.add_filtered(var.id, row)
         
-    def _addNumericFeature(self, f, from_widget=lambda n:n, step=None):
-        panel = NumericFeature()
+    def _addNumericVar(self, var, from_widget=lambda n:n, step=None):
+        panel = NumericVar()
         if step: panel.ids.slider.step = step
         
         def get(inst, value): return from_widget(panel.ids.slider.value)
         def set(value):
-            panel.ids.slider.range = (float(f.min), float(f.max))
+            panel.ids.slider.range = (float(var.min), float(var.max))
             panel.ids.slider.value = float(value)
             panel.ids.label.text = str(float(value))
 
-        on_change = self.bind_widget_to_feature(f,get,set)
+        on_change = self.bind_widget_to_shared_var(var,get,set)
         panel.ids.slider.bind(value=on_change)
         return panel
     
-    def addIntFeature(self, f):
-        return self._addNumericFeature(f, from_widget=lambda n:int(n), step=1)
+    def addIntVar(self, var):
+        return self._addNumericVar(var, from_widget=lambda n:int(n), step=1)
         
-    def addDecimalFeature(self, f):
-        return self._addNumericFeature(f, step=.5)
+    def addDecimalVar(self, var):
+        return self._addNumericVar(var, step=.5)
 
-    def addBoolFeature(self, f):
-        bf = BoolFeature()
+    def addBoolVar(self, var):
+        bf = BoolVar()
         
         def get(inst):
             return inst.value if inst.state == "down" else not inst.value
@@ -107,14 +107,14 @@ class TabPanel(ScrollView):
             bf.ids.on.state = trans[value]
             bf.ids.off.state = trans[not value]
 
-        on_change = self.bind_widget_to_feature(f,get,set)
+        on_change = self.bind_widget_to_shared_var(var,get,set)
         bf.ids.on.bind(on_press=on_change)
         bf.ids.off.bind(on_press=on_change)
         return bf
 
-    def addSelectFeature(self, f):
-        dropdown = SelectFeatureOptions()
-        button = SelectFeature()
+    def addSelectVar(self, var):
+        dropdown = SelectVarOptions()
+        button = SelectVar()
         button.bind(on_release=lambda i: dropdown.open(i))
         
         def get(inst, value): return value
@@ -124,15 +124,15 @@ class TabPanel(ScrollView):
         
         def update_options():
             dropdown.clear_widgets()
-            for text in f.options:
-                o = SelectFeatureOption()
+            for text in var.options:
+                o = SelectVarOption()
                 o.text = text
                 #o.bind(on_release=lambda i: dropdown.select(i.text))
                 o.bind(on_press=lambda i: on_change(o,i.text))
                 dropdown.add_widget(o)
             
 
-        on_change = self.bind_widget_to_feature(f,get,set)
+        on_change = self.bind_widget_to_shared_var(var,get,set)
         #dropdown.bind(on_select=on_change)
 
         return button
@@ -140,16 +140,16 @@ class TabPanel(ScrollView):
     def filter(self, func):
         self._filter = func
         self.ids.layout.clear_widgets()
-        for key, w in self.features.items(): self.add_filtered(key, w)
+        for key, w in self.shared_vars.items(): self.add_filtered(key, w)
 
     def add_filtered(self, key, w):
-        if self._filter(self.target.features[key]): self.ids.layout.add_widget(w)
+        if self._filter(self.target.shared_vars[key]): self.ids.layout.add_widget(w)
 
-    def bind_widget_to_feature(self, f, widget_getter, widget_setter):
-        """ @f Feature object """
+    def bind_widget_to_shared_var(self, var, widget_getter, widget_setter):
+        """ @var SharedVar object """
         on_value_change, on_widget_change = bind_widget_to_value(
-            f.get, f.remote_set, widget_getter, widget_setter)
-        f.bind(on_value_change)
+            var.get, var.remote_set, widget_getter, widget_setter)
+        var.bind(on_value_change)
         return on_widget_change
 
 
@@ -220,19 +220,19 @@ class ScrollViewLayoutHorizontal(GridLayout):
 
 class MyGrid(GridLayout): pass
 
-class FeatureRow(MyGrid): pass
+class VarRow(MyGrid): pass
 
-class NumericFeature(GridLayout): pass
+class NumericVar(GridLayout): pass
 
 class SettingsTab(StackLayout): pass
 
-class BoolFeature(GridLayout): pass
+class BoolVar(GridLayout): pass
 
-class SelectFeature(Button): pass
+class SelectVar(Button): pass
 
-class SelectFeatureOptions(DropDown): pass
+class SelectVarOptions(DropDown): pass
 
-class SelectFeatureOption(Button): pass
+class SelectVarOption(Button): pass
 
 class PinnedTab(CategoryTabHeader):
     text = "Pinned"
@@ -254,10 +254,10 @@ class SettingsTab(StackLayout):
     def __init__(self):
         super().__init__()
         scheme_names = {S.scheme_id: S.get_title() for S in get_schemes()}
-        dropdown = SelectFeatureOptions()
+        dropdown = SelectVarOptions()
         self.ids.scheme.bind(on_release=lambda i: dropdown.open(i))
         for scheme, title in scheme_names.items():
-            o = SelectFeatureOption()
+            o = SelectVarOption()
             o.text = title
             o.bind(on_release=lambda e,scheme=scheme: dropdown.select(scheme))
             dropdown.add_widget(o)
@@ -320,7 +320,7 @@ class MenuScreen(_MenuScreen):
     
     def __init__(self, *args, **xargs):
         super().__init__(*args, **xargs)
-        self.target.features.name.bind(self.set_title)
+        self.target.shared_vars.name.bind(self.set_title)
         self.target.start()
     
     def set_title(self, name):
@@ -332,15 +332,15 @@ class MenuScreen(_MenuScreen):
         self._visible_when_connected(self.pinned_tab)
         self.all_tab = AllTab(self)
         self._visible_when_connected(self.all_tab)
-        categories = list(dict.fromkeys([f.category for f in self.target.features.values()]))
+        categories = list(dict.fromkeys([var.category for var in self.target.shared_vars.values()]))
         tabs = {}
         for cat in categories:
             e = self._newTab(cat)
             tabs[cat] = e
             hide_widget(e)
             self.target.bind(on_disconnected = lambda e=e:Clock.schedule_once(lambda *_:hide_widget(e), 0))
-        for key, f in self.target.features.items():
-            f.bind(on_set = lambda cat=f.category: Clock.schedule_once(lambda *_:show_widget(tabs[cat]), 0))
+        for key, var in self.target.shared_vars.items():
+            var.bind(on_set = lambda cat=var.category: Clock.schedule_once(lambda *_:show_widget(tabs[cat]), 0))
         super().build()
         self.target.bind(on_connect=lambda:Clock.schedule_once(lambda *_:self.pinned_tab.activate(), 0))
         self.target.bind(on_disconnected=lambda:Clock.schedule_once(lambda *_:self.connecting_tab.activate(), 0))
@@ -359,7 +359,7 @@ class MenuScreen(_MenuScreen):
         self.ids.headers.add_widget(header)
         return header
 
-    def on_enter(self): self.panel.addFeaturesFromStack()
+    def on_enter(self): self.panel.addSharedVarsFromStack()
         
     def on_leave(self): self.target.stop()
 

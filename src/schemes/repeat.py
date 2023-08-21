@@ -7,7 +7,7 @@ class ClientRepeaterMixin:
     
     def __init__(self, target, *args, **xargs):
         self._client = target
-        self._client.preload_features = self._client.features.keys()
+        self._client.preload_shared_vars = self._client.shared_vars.keys()
         self._client.bind(on_receive_raw_data = lambda data:self.send(data))
         super().__init__(*args, **xargs)
     

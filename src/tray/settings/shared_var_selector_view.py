@@ -1,15 +1,15 @@
 """
-Creates a treeview inside a Gtk widget for drag n drop feature selection
+Creates a treeview inside a Gtk widget for drag n drop selection of shared variables
 """
 
-__all__ = ["FeatureSelectorView"]
+__all__ = ["SharedVarSelectorView"]
 
 
 from random import randint
 from gi.repository import Gtk, Gdk, GObject
-from ...core import features
+from ...core import shared_vars
 from ...core.util import Bindable
-from ..common import config, resolve_feature_id, id_to_string, id_to_feature
+from ..common import config, resolve_shared_var_id, id_to_string, id_to_shared_var
 
 
 class AvailTreeStore(Gtk.TreeStore):
@@ -22,7 +22,7 @@ class AvailTreeStore(Gtk.TreeStore):
     def do_row_draggable(self, path):
         #return path.get_depth() > 1
         obj = self._view.get_model().get_value(self._view.get_model().get_iter(path), 0)
-        return isinstance(obj, features.Feature)
+        return isinstance(obj, shared_vars.SharedVar)
 
 
 class _Base:
@@ -46,7 +46,7 @@ class _Base:
         selection.set(Gdk.TARGET_STRING, 8, b)
 
 
-class AvailableFeaturesList:
+class AvailableVarsList:
 
     def __init__(self, *args, **xargs):
         super().__init__(*args, **xargs)
@@ -56,14 +56,14 @@ class AvailableFeaturesList:
         view.connect("drag-data-get", self.on_view_drag_data_get)
         view.connect("drag-data-received", self.on_avail_view_drag_data_received)
         column = Gtk.TreeViewColumn()
-        column.set_title("Available Features")
+        column.set_title("Available Functions")
         view.append_column(column)
         sw.add(view)
         sw.show_all()
         if self.target:
             avail_list = AvailTreeStore(view, GObject.TYPE_PYOBJECT)
-            category = {c:avail_list.append(None, [c]) for c in self.target.feature_categories}
-            for f in self.target.features.values(): avail_list.append(category[f.category], [f])
+            category = {c:avail_list.append(None, [c]) for c in self.target.shared_var_categories}
+            for f in self.target.shared_vars.values(): avail_list.append(category[f.category], [f])
             view.set_model(avail_list)
             cell = Gtk.CellRendererText()
             column.set_cell_data_func(cell, self._set_avail_cell_text)
@@ -81,10 +81,10 @@ class AvailableFeaturesList:
 
     def on_avail_view_drag_data_received(self, treeview, context, x, y, selection, info, timestamp):
         context.finish(True, True, timestamp)
-        self.on_selected_features_change()
+        self.on_selected_vars_change()
 
 
-class SelectedFeaturesList(Bindable):
+class SelectedVarsList(Bindable):
     _value = list
 
     def __init__(self, *args, **xargs):
@@ -115,8 +115,9 @@ class SelectedFeaturesList(Bindable):
     def on_change(self, f_ids): pass
 
     def _update_listeners(self, f_ids):
-        features = [f for f_id in f_ids for f in [id_to_feature(self.target, resolve_feature_id(f_id))] if f]
-        self.on_change(features)
+        shared_vars = [f for f_id in f_ids for f in
+            [id_to_shared_var(self.target, resolve_shared_var_id(f_id))] if f]
+        self.on_change(shared_vars)
 
     def get_value(self): return self._value
 
@@ -148,9 +149,9 @@ class SelectedFeaturesList(Bindable):
         else:
             self.menu_list.append([f_id])
         context.finish(True, info == self.dnd_from_menu_info, timestamp)
-        self.on_selected_features_change()
+        self.on_selected_vars_change()
 
-    def on_selected_features_change(self):
+    def on_selected_vars_change(self):
         f_ids = [row[0] for row in self.menu_list]
         self._value = f_ids
         self._update_listeners(f_ids)
@@ -159,6 +160,6 @@ class SelectedFeaturesList(Bindable):
         context.finish(True, False, time)
 
 
-class FeatureSelectorView(SelectedFeaturesList, AvailableFeaturesList, _Base): pass
+class SharedVarSelectorView(SelectedVarsList, AvailableVarsList, _Base): pass
 
 

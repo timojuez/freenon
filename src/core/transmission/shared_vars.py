@@ -11,29 +11,29 @@ MAX_CALL_DELAY = 2 #seconds, max delay for calling function using "@require"
 
 
 class FunctionCall(object):
-    """ Function call that requires features. Drops call if no connection """
+    """ Function call that requires shared variables. Drops call if no connection """
 
-    def __init__(self, target, func, args=tuple(), kwargs={}, features=tuple(), timeout=MAX_CALL_DELAY):
+    def __init__(self, target, func, args=tuple(), kwargs={}, required_vars=tuple(), timeout=MAX_CALL_DELAY):
         self._lock = Lock()
         self._target = target
         self._func = func
-        self._features = features
+        self._vars = required_vars
         self._args = args
         self._kwargs = kwargs
         self._timeout = datetime.now()+timedelta(seconds=timeout) if timeout != None else None
         self.postpone()
-        try: [f.async_poll() for f in self._missing_features]
+        try: [var.async_poll() for var in self._missing_vars]
         except ConnectionError: self.cancel()
 
     def __repr__(self): return "<pending%s>"%self._func
 
-    _missing_features = property(lambda self: list(filter(lambda f:not f.is_set(), self._features)))
+    _missing_vars = property(lambda self: list(filter(lambda var:not var.is_set(), self._vars)))
 
     def try_call(self):
         with self._lock:
             if not self.active: return False
-            if not self._missing_features:
-                try: self._func(*self._features, *self._args, **self._kwargs)
+            if not self._missing_vars:
+                try: self._func(*self._vars, *self._args, **self._kwargs)
                 except ConnectionError: pass
                 except: traceback.print_exc()
                 finally: self.cancel()
@@ -54,34 +54,34 @@ class FunctionCall(object):
                 %(self.__class__.__name__, self._func.__name__), file=sys.stderr)
             self.cancel()
     
-    def on_feature_set(self, feature):
-        if feature in self._features and self.try_call():
+    def on_shared_var_set(self, var):
+        if var in self._vars and self.try_call():
             if self._target.verbose > 5: print("[%s] called pending function %s"
                 %(self.__class__.__name__, self._func.__name__), file=sys.stderr)
 
 
-class Features(AttrDict):
+class SharedVars(AttrDict):
     
-    def wait_for(self, *features):
-        try: features = [f if isinstance(f, Feature) else self[f] for f in features]
+    def wait_for(self, *shared_vars):
+        try: shared_vars = [var if isinstance(var, SharedVar) else self[var] for var in shared_vars]
         except KeyError as e:
-            print(f"[{self.__class__.__name__}] Warning: Target does not provide feature. {e}",
+            print(f"[{self.__class__.__name__}] Warning: Target does not provide shared variable. {e}",
                 file=sys.stderr)
             return False
-        threads = [Thread(target=f.wait_poll, daemon=True, name="wait_for") for f in features]
+        threads = [Thread(target=var.wait_poll, daemon=True, name="wait_for") for var in shared_vars]
         for t in threads: t.start()
         for t in threads: t.join()
-        return all([f.is_set() for f in features])
+        return all([var.is_set() for var in shared_vars])
         
 
-class FeatureInterface(object):
+class SharedVarInterface(object):
     name = "Short description"
     category = "Misc"
     call = None # for retrieval, call target.send(call)
     default_value = None # if no response from server
     dummy_value = None # for dummy server
     type = object # value data type, e.g. int, bool, str
-    #id = "id" # feature will be available as target.id; default: id = class name
+    #id = "id" # variable will be available as target.shared_vars.id; default: id = class name
 
     def init_on_server(self):
         """ called after __init__ on server side """
@@ -113,7 +113,7 @@ class FeatureInterface(object):
         raise NotImplementedError()
 
 
-class _MetaFeature(type):
+class _MetaVar(type):
 
     def __init__(cls, name, bases, dct):
         if "id" not in dct:
@@ -123,7 +123,7 @@ class _MetaFeature(type):
             cls.name = " ".join(["%s%s"%(x[0].upper(),x[1:]) if len(x)>0 else "" for x in cls.name.split("_")])
 
         
-class AsyncFeature(FeatureInterface, Bindable, metaclass=_MetaFeature):
+class AsyncSharedVar(SharedVarInterface, Bindable, metaclass=_MetaVar):
     """
     A target attribute for high level communication
     If being used in a with statement, the value will not change during execution of the inside code.
@@ -150,7 +150,7 @@ class AsyncFeature(FeatureInterface, Bindable, metaclass=_MetaFeature):
         self._lock = self._lock()
         self._event_on_set = self._event_on_set()
         self.children = []
-        target.features[self.id] = self
+        target.shared_vars[self.id] = self
         
     def __str__(self):
         with self: return str(self.get()) if self.is_set() else "..."
@@ -170,7 +170,7 @@ class AsyncFeature(FeatureInterface, Bindable, metaclass=_MetaFeature):
 
             def __init__(self, *args, **xargs):
                 super().__init__(*args, **xargs)
-                self.parent = self.target.features[parent.id]
+                self.parent = self.target.shared_vars[parent.id]
                 self.parent.children.append(self.id)
 
             def matches(self, data):
@@ -235,7 +235,7 @@ class AsyncFeature(FeatureInterface, Bindable, metaclass=_MetaFeature):
             self.on_unset()
         #with suppress(ValueError): self.target._polled.remove(self.call)
 
-    def async_poll(self, *args, **xargs): self.target.poll_feature(self, *args, **xargs)
+    def async_poll(self, *args, **xargs): self.target.poll_shared_var_value(self, *args, **xargs)
     
     def poll_on_client(self):
         """ async_poll() executed on client side """
@@ -247,7 +247,7 @@ class AsyncFeature(FeatureInterface, Bindable, metaclass=_MetaFeature):
     def poll_on_dummy(self):
         if self.dummy_value is not None: val = self.dummy_value
         elif self.default_value is not None: val = self.default_value
-        else: raise ValueError("Feature %s has no dummy value."%self.id)
+        else: raise ValueError("Shared variable %s has no dummy value."%self.id)
         #self.on_receive_raw_data(f.serialize(val)) # TODO: handle cases where f.call matches but f.matches() is False and maybe f'.matches() is True
         self.set(val)
 
@@ -273,7 +273,7 @@ class AsyncFeature(FeatureInterface, Bindable, metaclass=_MetaFeature):
         self.__class__._block_on_remote_set = None # for power.consume("PWON")
         try:
             d = self.unserialize(data)
-            return self.target.on_receive_feature_value(self, d)
+            return self.target.on_receive_shared_var_value(self, d)
         except:
             print(f"Error on {self.id}.consume({repr(data)}):", file=sys.stderr)
             print(traceback.format_exc(), file=sys.stderr)
@@ -310,7 +310,7 @@ class AsyncFeature(FeatureInterface, Bindable, metaclass=_MetaFeature):
             
     def on_change(self, val):
         """ This event is being called when self.options or the return value of self.get() changes """
-        self.target.on_feature_change(self.id, val)
+        self.target.on_shared_var_change(self.id, val)
     
     def on_set(self):
         """ Event is fired on initial set """
@@ -322,8 +322,8 @@ class AsyncFeature(FeatureInterface, Bindable, metaclass=_MetaFeature):
                 %(self.target.__class__.__name__, len(self.target._pending)), file=sys.stderr)
             if self.target.verbose > 6: print("[%s] pending functions: %s"
                 %(self.target.__class__.__name__, self.target._pending), file=sys.stderr)
-            for call in self.target._pending.copy(): # on_feature_set() changes _pending
-                call.on_feature_set(self)
+            for call in self.target._pending.copy(): # on_shared_var_set() changes _pending
+                call.on_shared_var_set(self)
         
     def on_unset(self):
         try: self._timer_set_default.cancel()
@@ -331,7 +331,7 @@ class AsyncFeature(FeatureInterface, Bindable, metaclass=_MetaFeature):
         self._event_on_set.clear()
     
     def on_processed(self, value):
-        """ This event is being called each time the feature is being set to a value
+        """ This event is being called each time the variable is being set to a value
         even if the value is the same as the previous one """
         pass
 
@@ -340,7 +340,7 @@ class AsyncFeature(FeatureInterface, Bindable, metaclass=_MetaFeature):
         pass
 
 
-class SynchronousFeature(AsyncFeature):
+class SynchronousSharedVar(AsyncSharedVar):
 
     def __init__(self,*args,**xargs):
         self._poll_lock = Lock()
@@ -354,7 +354,7 @@ class SynchronousFeature(AsyncFeature):
                 else: raise ConnectionError("Timeout on waiting for answer for %s"%self.id)
 
     def wait_poll(self, force=False):
-        """ Poll and wait if Feature is unset. Returns False on timeout and True otherwise """
+        """ Poll and wait if variable is unset. Returns False on timeout and True otherwise """
         if not self.target.connected: return False
         if force: self.unset()
         if not self.is_set():
@@ -364,37 +364,38 @@ class SynchronousFeature(AsyncFeature):
         return True
 
 
-Feature = SynchronousFeature
+SharedVar = SynchronousSharedVar
 
-class NumericFeature(Feature):
+class NumericVar(SharedVar):
     min=0
     max=99
 
 
-class IntFeature(NumericFeature):
+class IntVar(NumericVar):
     type=int
     dummy_value = property(lambda self: self.default_value or math.ceil((self.max+self.min)/2))
 
 
-class SelectFeature(Feature):
+class SelectVar(SharedVar):
     type=str
     options = []
     dummy_value = property(lambda self: self.default_value or (self.options[0] if self.options else "?"))
 
     def remote_set(self, value, force=False):
         if not force and value not in self.options:
-            raise ValueError("Value must be one of %s or try target.features.%s.remote_set(value, force=True)"
+            raise ValueError(
+                "Value must be one of %s or try target.shared_vars.%s.remote_set(value, force=True)"
                 %(self.options, self.id))
         return super().remote_set(value, force)
     
 
-class BoolFeature(SelectFeature):
+class BoolVar(SelectVar):
     type=bool
     options = [True, False]
     dummy_value = property(lambda self: self.default_value or False)
 
 
-class DecimalFeature(NumericFeature):
+class DecimalVar(NumericVar):
     type=Decimal
     dummy_value = property(lambda self: self.default_value or Decimal(self.max+self.min)/2)
     
@@ -406,7 +407,7 @@ class DecimalFeature(NumericFeature):
 
 
 class PresetValueMixin:
-    """ Inherit if feature value shall have a preset value. Set value in inherited class. """
+    """ Inherit if variable value shall have a preset value. Set value in inherited class. """
     value = None
 
     def __init__(self,*args,**xargs):
@@ -416,13 +417,13 @@ class PresetValueMixin:
 
 
 class ConstantValueMixin(PresetValueMixin):
-    """ Inerhit if feature value may not change """
+    """ Inerhit if variable value may not change """
     def matches(self,*args,**xargs): return False
     def set(self,*args,**xargs): pass
 
 
-class ClientToServerFeatureMixin:
-    """ Inheriting features are write only on client and read only on server """
+class ClientToServerVarMixin:
+    """ Inheriting variables are write only on client and read only on server """
     call = None
 
     # for client
@@ -438,18 +439,18 @@ class ClientToServerFeatureMixin:
     # for server
     def remote_set(self, *args, **xargs):
         if isinstance(self.target, ClientType): return super().remote_set(*args, **xargs)
-        else: raise ValueError("This is a unidirectional feature")
+        else: raise ValueError("This is a unidirectionally shared variable.")
 
     def resend(self): pass
 
 
-class ServerToClientFeatureMixin:
+class ServerToClientVarMixin:
     options = []
 
     def remote_set(self, *args, **xargs): raise RuntimeError("Cannot set value!")
 
 
-class OfflineFeatureMixin:
+class OfflineVarMixin:
     """ Inherit if the value shall not ever be transmitted """
 
     def matches(self, data): return False
@@ -458,19 +459,19 @@ class OfflineFeatureMixin:
     def resend(self, *args, **xargs): pass
 
 
-class FeatureBlock:
+class VarBlock:
     """
-    A feature block returns a list of features when polled on server.
+    A shared variable block returns a list of values when polled on server.
     Handles CVa\r CVb\r CVc\r CVEND on Denon.
-    Subfeatures must be added to the Scheme as Scheme.add_feature(parent=FeatureBlock).
+    Subvariables must be added to the Scheme as Scheme.shared_var(parent=VarBlock).
     """
     _resending = False
 
     def resend(self):
         if self._resending: return #prevent recursive call when schedule() polls
         self._resending = True
-        def func(*features):
-            for f in features: self._send(f.serialize(f.get()))
+        def func(*shared_vars):
+            for var in shared_vars: self._send(var.serialize(var.get()))
         try: self.target.schedule(func, requires=self.children)
         finally: self._resending = False
 

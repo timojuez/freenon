@@ -216,7 +216,7 @@
             <property name="can_focus">False</property>
             <property name="halign">center</property>
             <child>
-              <object class="GtkComboBox" id="power_feature">
+              <object class="GtkComboBox" id="power_var">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <signal name="changed" handler="on_selector_changed" swapped="no"/>
@@ -227,7 +227,7 @@
               </packing>
             </child>
             <child>
-              <object class="GtkComboBox" id="volume_feature">
+              <object class="GtkComboBox" id="volume_var">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <signal name="changed" handler="on_selector_changed" swapped="no"/>
@@ -238,7 +238,7 @@
               </packing>
             </child>
             <child>
-              <object class="GtkComboBox" id="muted_feature">
+              <object class="GtkComboBox" id="muted_var">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <signal name="changed" handler="on_selector_changed" swapped="no"/>
@@ -249,7 +249,7 @@
               </packing>
             </child>
             <child>
-              <object class="GtkComboBox" id="source_feature">
+              <object class="GtkComboBox" id="source_var">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <signal name="changed" handler="on_selector_changed" swapped="no"/>
@@ -320,7 +320,7 @@
               </packing>
             </child>
             <child>
-              <object class="GtkComboBox" id="idle_feature">
+              <object class="GtkComboBox" id="idle_var">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
               </object>

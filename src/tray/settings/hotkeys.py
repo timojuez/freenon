@@ -1,8 +1,8 @@
 import traceback
 from gi.repository import Gdk, Gtk
 from pynput import mouse, keyboard
-from ...core.transmission import features
-from ..common import GladeGtk, gtk, config, resolve_feature_id
+from ...core.transmission import shared_vars
+from ..common import GladeGtk, gtk, config, resolve_shared_var_id
 
 
 class _Shortcut:
@@ -41,7 +41,7 @@ class _Shortcut:
 
 class HotkeySetting(_Shortcut):
     config_property = "keyboard"
-    new_conf = {"key": None, "step": 3, "feature": None}
+    new_conf = {"key": None, "step": 3, "var": None}
     grid_id = "keyboard_hotkeys"
 
     def build(self):
@@ -49,9 +49,9 @@ class HotkeySetting(_Shortcut):
         self._set_hotkey_label(key_selector, self.conf["key"])
         key_selector.connect("clicked", self.on_hotkey_button_clicked, self.i)
         combobox = self.attach(Gtk.ComboBox())
-        self.app.connect_feature_selector_to_config(
-            combobox=combobox, config_property=("hotkeys", "keyboard", self.i, "feature"),
-            allow_types=(features.NumericFeature, features.BoolFeature), default_value="@volume_id")
+        self.app.connect_shared_var_selector_to_config(
+            combobox=combobox, config_property=("hotkeys", "keyboard", self.i, "var"),
+            allow_types=(shared_vars.NumericVar, shared_vars.BoolVar), default_value="@volume_id")
         self.spin = self.attach(Gtk.SpinButton())
         self.show_spin()
         combobox.connect("changed", self.show_spin)
@@ -67,7 +67,7 @@ class HotkeySetting(_Shortcut):
         self.app.app_manager.main_app.input_listener.refresh_hotkeys()
 
     def show_spin(self, w=None):
-        f = self.app.target.features.get(resolve_feature_id(self.conf["feature"]))
+        f = self.app.target.shared_vars.get(resolve_shared_var_id(self.conf["var"]))
         if f is not None and f.type != bool: self.spin.show()
         else: self.spin.hide()
 
@@ -116,7 +116,7 @@ class HotkeySetting(_Shortcut):
 
 class MouseGesture(_Shortcut):
     config_property = "mouse"
-    new_conf = {"button": None, "sensitivity": 60, "max_step": 8, "feature": None}
+    new_conf = {"button": None, "sensitivity": 60, "max_step": 8, "var": None}
     grid_id = "mouse_gestures"
 
     def build(self):
@@ -124,10 +124,10 @@ class MouseGesture(_Shortcut):
         button.connect("clicked", self.on_mouse_button_clicked, self.i)
         self._set_mouse_button_label(button, config["hotkeys"]["mouse"][self.i]["button"])
         function = self.attach(Gtk.ComboBox())
-        self.app.connect_feature_selector_to_config(
+        self.app.connect_shared_var_selector_to_config(
             combobox=function,
-            config_property=("hotkeys", "mouse", self.i, "feature"),
-            allow_types=(features.NumericFeature,), default_value="@volume_id")
+            config_property=("hotkeys", "mouse", self.i, "var"),
+            allow_types=(shared_vars.NumericVar,), default_value="@volume_id")
         sensitivity = self.attach(Gtk.SpinButton())
         adj = Gtk.Adjustment()
         adj.configure(0, 1, 1000, 1, 10, 1)

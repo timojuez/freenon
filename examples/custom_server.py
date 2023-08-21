@@ -10,7 +10,7 @@ Run client:
 
 import time
 from threading import Thread, Lock
-from hificon.core import features, SocketServer, SocketScheme
+from hificon.core import shared_vars, SocketServer, SocketScheme
 from hificon import Target, register_scheme
 
 
@@ -19,8 +19,8 @@ class ExternalCounter:
     value = 0
     lock = Lock()
 
-    def __init__(self, feature):
-        self.feature = feature
+    def __init__(self, var):
+        self.var = var
         Thread(target=self.count, daemon=True).start()
 
     def count(self):
@@ -32,7 +32,7 @@ class ExternalCounter:
         if value < 50:
             with self.lock:
                 self.value = value
-                self.feature.set(self.value) # sync clients
+                self.var.set(self.value) # sync clients
 
 
 class MyServer(SocketServer):
@@ -43,7 +43,7 @@ class MyServer(SocketServer):
     
     def __init__(self, ip="127.0.0.1", port=0, start=None, *args, **xargs):
         super().__init__(ip, port, *args, **xargs)
-        if start: self.features.counter.external_counter.set(int(start))
+        if start: self.shared_vars.counter.external_counter.set(int(start))
 
 
 class MyScheme(SocketScheme):
@@ -52,8 +52,8 @@ class MyScheme(SocketScheme):
     Server = MyServer
 
 
-@MyScheme.add_feature
-class CounterFeature(features.IntFeature):
+@MyScheme.shared_var
+class CounterShared(shared_vars.IntVar):
     """ connects ExternalCounter with the server and clients """
     key = "counter"
     min = 0

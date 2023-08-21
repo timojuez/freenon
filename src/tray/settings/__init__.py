@@ -1,8 +1,8 @@
 from gi.repository import Gtk
-from ...core.transmission import features
-from ..common import GladeGtk, gtk, config, id_to_string, FeatureSelectorCombobox, FeatureValueCombobox, autostart
+from ...core.transmission import shared_vars
+from ..common import GladeGtk, gtk, config, id_to_string, SharedVarSelectorCombobox, SharedVarValueCombobox, autostart
 from ..setup_wizard import SetupWizard
-from .feature_selector_view import FeatureSelectorView
+from .shared_var_selector_view import SharedVarSelectorView
 from .hotkeys import HotkeysMixin
 
 
@@ -24,9 +24,9 @@ class TrayIconMixin:
         super().__init__(*args, **xargs)
         self.connect_adjustment_to_config(
             self.builder.get_object("scroll_delta"), ("tray", "scroll_delta"))
-        self.connect_feature_selector_to_config(
-            combobox=self.builder.get_object("tray_icon_function"), config_property=("tray", "scroll_feature"),
-            allow_types=(features.NumericFeature,), default_value="@volume_id",
+        self.connect_var_selector_to_config(
+            combobox=self.builder.get_object("tray_icon_function"), config_property=("tray", "scroll_var"),
+            allow_types=(shared_vars.NumericVar,), default_value="@volume_id",
             on_changed=lambda *_:self.app_manager.main_app.icon.update_icon())
 
 
@@ -34,16 +34,16 @@ class PopupMenuSettings:
 
     def __init__(self, *args, on_menu_settings_change=None, **xargs):
         super().__init__(*args, **xargs)
-        fs = FeatureSelectorView(self.target, self.builder.get_object("popup_menu_settings"), "Context Menu")
-        if on_menu_settings_change: fs.bind(on_change = on_menu_settings_change)
-        fs.bind(on_change = config.connect_to_object(["tray", "menu_features"], fs.get_value, fs.set_value))
+        vs = SharedVarSelectorView(self.target, self.builder.get_object("popup_menu_settings"), "Context Menu")
+        if on_menu_settings_change: vs.bind(on_change = on_menu_settings_change)
+        vs.bind(on_change = config.connect_to_object(["tray", "menu_vars"], vs.get_value, vs.set_value))
 
 
 class NotificationSettings:
 
     def __init__(self, *args, **xargs):
         super().__init__(*args, **xargs)
-        self.notification_blacklist = nb = FeatureSelectorView(
+        self.notification_blacklist = nb = SharedVarSelectorView(
             self.target, self.builder.get_object("notification_settings"), "Disabled")
         nb.bind(on_change =
             config.connect_to_object(["notifications", "blacklist"], nb.get_value, nb.set_value))
@@ -78,15 +78,15 @@ class SettingsBase(GladeGtk):
         else: self.hide()
         return True
 
-    def connect_feature_selector_to_config(self, combobox, config_property, default_value=None,
+    def connect_var_selector_to_config(self, combobox, config_property, default_value=None,
             *args, on_changed=None, **xargs):
         if default_value:
             xargs["items"] = [("Default – %s"%id_to_string(self.target, default_value), default_value)]
-        fc = FeatureSelectorCombobox(self.target, combobox, *args, **xargs)
+        fc = SharedVarSelectorCombobox(self.target, combobox, *args, **xargs)
         self._connect_combobox_to_config(config_property, fc, on_changed)
 
     def connect_value_selector_to_config(self, combobox, config_property, *args, on_changed=None, **xargs):
-        fc = FeatureValueCombobox(self.target, combobox, *args, **xargs)
+        fc = SharedVarValueCombobox(self.target, combobox, *args, **xargs)
         self._connect_combobox_to_config(config_property, fc, on_changed)
 
     def _connect_combobox_to_config(self, config_property, fc, on_changed=None):

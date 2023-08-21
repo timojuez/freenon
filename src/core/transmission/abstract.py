@@ -1,6 +1,6 @@
 """
 The classes AbstractClient and SocketClient help you to stay synchronised with
-remote values. A client supports features. See features.py.
+remote values. They support shared variables. See shared_vars.py.
 """
 
 import sys, re, traceback
@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 from ..util import log_call, Bindable, AbstractMainloopManager
 from .types import SchemeType, ServerType, ClientType
 from .discovery import DiscoverySchemeMixin
-from . import features
+from . import shared_vars
 
 
 class AbstractTarget(Bindable, AbstractMainloopManager):
@@ -20,16 +20,16 @@ class AbstractTarget(Bindable, AbstractMainloopManager):
     uri = ""
     scheme_id = "[undefined]"
     Scheme = None
-    features = features.Features()
-    feature_categories = property(lambda self: self.Scheme.feature_categories)
+    shared_vars = shared_vars.SharedVars()
+    shared_var_categories = property(lambda self: self.Scheme.shared_var_categories)
 
     def __init__(self, *args, verbose=0, **xargs):
         self.verbose = verbose
         self.update_uri()
-        self.features = self.features.__class__()
+        self.shared_vars = self.shared_vars.__class__()
         self._pending = []
-        # apply @features to self
-        for F in self.Scheme.features.values(): F(self)
+        # apply @shared_vars to self
+        for Var in self.Scheme.shared_vars.values(): Var(self)
         super().__init__(*args, **xargs)
 
     def __eq__(self, target):
@@ -39,30 +39,30 @@ class AbstractTarget(Bindable, AbstractMainloopManager):
 
     def update_uri(self, *args): self.uri = ":".join(map(str, [self.scheme_id, *args]))
 
-    def poll_feature(self, f, *args, **xargs):
-        """ Called when a feature value is being requested """
+    def poll_shared_var_value(self, var, *args, **xargs):
+        """ Called when a shared variable value is being requested """
         raise NotImplementedError()
 
-    def on_receive_feature_value(self, f, value):
+    def on_receive_shared_var_value(self, var, value):
         """ Called when a value is being received from the other side """
         raise NotImplementedError()
 
-    def set_feature_value(self, f, value):
-        """ Set a value through the framework. Usually, on a client this will call f.remote_set() """
+    def set_shared_var_value(self, var, value):
+        """ Set a value through the framework. Usually, on a client this will call var.remote_set() """
         raise NotImplementedError()
 
     def schedule(self, func, args=tuple(), kwargs={}, requires=tuple()):
-        """ Use this to call methods that use Target.features.
-        Call func(feature_1, ..., feature_n, *args, **xargs) if all n features in @requires are set.
-        Poll features and schedule func otherwise. """
+        """ Use this to call methods that use Target.shared_vars.
+        Call func(var_1, ..., var_n, *args, **xargs) if all n vars in @requires are set.
+        Poll vars and schedule func otherwise. """
         if not self.connected: return
-        try: features_ = [self.features[name] for name in requires]
+        try: vars_ = [self.shared_vars[name] for name in requires]
         except KeyError as e:
             if self.verbose > 3:
-                print("[%s] Warning: Target does not provide feature required by `%s`: %s"
+                print("[%s] Warning: Target does not provide shared vars required by `%s`: %s"
                 %(self.__class__.__name__, func.__name__, e), file=sys.stderr)
             return
-        return features.FunctionCall(self, func, args, kwargs, features_)
+        return shared_vars.FunctionCall(self, func, args, kwargs, vars_)
 
     def mainloop_hook(self):
         super().mainloop_hook()
@@ -71,26 +71,26 @@ class AbstractTarget(Bindable, AbstractMainloopManager):
             p.try_call()
 
     @log_call
-    def on_feature_change(self, f_id, value):
-        """ attribute on server has changed """
-        if f_id and self.verbose > 2:
-            print("[%s] $%s = %s"%(self.__class__.__name__,f_id,repr(value)))
+    def on_shared_var_change(self, var_id, value):
+        """ shared variable on server has changed """
+        if var_id and self.verbose > 2:
+            print("[%s] $%s = %s"%(self.__class__.__name__, var_id, repr(value)))
         
     def send(self, data): raise NotImplementedError()
 
     def on_receive_raw_data(self, data):
-        consumed = [f.consume([data]) for f_id,f in self.features.items() if f.matches(data)]
-        if not consumed: self.features.fallback.consume([data])
+        consumed = [var.consume([data]) for var_id, var in self.shared_vars.items() if var.matches(data)]
+        if not consumed: self.shared_vars.fallback.consume([data])
 
     def handle_uri_path(self, uri):
-        if uri.path.startswith("/get/") and (f := self.features.get(uri.path[len("/get/"):])):
-            print(f.get_wait())
+        if uri.path.startswith("/get/") and (var := self.shared_vars.get(uri.path[len("/get/"):])):
+            print(var.get_wait())
         elif uri.path in ("/", "", "/set"):
             for key, val in parse_qsl(uri.query[1:], True):
                 if val: # ?fkey=val
-                    f = self.features[key]
-                    convert = {bool: lambda s:s[0].lower() in "yt1"}.get(f.type, f.type)
-                    self.set_feature_value(f, convert(val))
+                    var = self.shared_vars[key]
+                    convert = {bool: lambda s:s[0].lower() in "yt1"}.get(var.type, var.type)
+                    self.set_shared_var_value(var, convert(val))
                 else: self.send(key) # ?COMMAND #FIXME: use self.on_receive_raw_data for server
         else:
             print("404")
@@ -116,9 +116,9 @@ class AbstractServer(ServerType, AbstractTarget):
 
     def __init__(self, *args, **xargs):
         super().__init__(*args, **xargs)
-        for f in self.features.values(): f.init_on_server()
-        for f in self.features.values():
-            not f.id=="fallback" and f.bind(on_change=lambda *_,f=f: self.connected and f.resend())
+        for var in self.shared_vars.values(): var.init_on_server()
+        for var in self.shared_vars.values():
+            not var.id=="fallback" and var.bind(on_change=lambda *_,var=var: self.connected and var.resend())
     
     def enter(self):
         self.connected = True
@@ -134,20 +134,20 @@ class AbstractServer(ServerType, AbstractTarget):
         AttachedClient = type(Client.__name__, (AttachedClientMixin, Client), {"_server":self})
         return AttachedClient(*args, **xargs)
 
-    def set_feature_value(self, f, value): return f.set(value)
+    def set_shared_var_value(self, var, value): return var.set(value)
 
-    def poll_feature(self, f, *args, **xargs): f.poll_on_server()
+    def poll_shared_var_value(self, var, *args, **xargs): var.poll_on_server()
 
-    def on_receive_feature_value(self, f, value): f.set_on_server(value)
+    def on_receive_shared_var_value(self, var, value): var.set_on_server(value)
 
     def on_receive_raw_data(self, data):
         if self.verbose >= 2: print(f"{self.uri} > ${repr(data)}")
-        called_features = [f for f_id, f in self.features.items() if f.call == data]
-        if called_features:
+        called_vars = [var for var_id, var in self.shared_vars.items() if var.call == data]
+        if called_vars:
             # data is a request
-            for f in called_features:
-                if f.is_set(): f.resend()
-                else: self.poll_feature(f)
+            for var in called_vars:
+                if var.is_set(): var.resend()
+                else: self.poll_shared_var_value(var)
         else:
             # data is a command
             super().on_receive_raw_data(data)
@@ -186,20 +186,20 @@ class GroupedSet:
 
 
 class _PreloadMixin:
-    preload_features = GroupedSet() # feature ids to be polled constantly when not set
-    _preload_features_iter = None
+    preload_shared_vars = GroupedSet() # shared_var ids to be polled constantly when not set
+    _preload_shared_vars_iter = None
     _preload_iteration_completed = False
     _preload_timeout = None
     _send_count = 0
 
     def __init__(self, *args, **xargs):
         super().__init__(*args, **xargs)
-        self.preload_features = GroupedSet(self.preload_features)
+        self.preload_shared_vars = GroupedSet(self.preload_shared_vars)
 
     def on_connect(self):
         super().on_connect()
         self._preload_iteration_completed = False
-        self._preload_features_iter = None
+        self._preload_shared_vars_iter = None
 
     def mainloop_hook(self):
         super().mainloop_hook()
@@ -212,15 +212,15 @@ class _PreloadMixin:
             self._preload(2)
 
     def _preload(self, max_polls):
-        if not self._preload_features_iter: self._preload_features_iter = iter(self.preload_features)
+        if not self._preload_shared_vars_iter: self._preload_shared_vars_iter = iter(self.preload_shared_vars)
         self._send_count = 0
         for _ in range(max_polls*100):
-            try: f_id = next(self._preload_features_iter)
+            try: f_id = next(self._preload_shared_vars_iter)
             except StopIteration:
-                self._preload_features_iter = None
+                self._preload_shared_vars_iter = None
                 self._preload_iteration_completed = True
                 break
-            if (f := self.features.get(f_id)) and not f.is_set():
+            if (f := self.shared_vars.get(f_id)) and not f.is_set():
                 try: f.async_poll()
                 except ConnectionError: break
             if self._send_count >= max_polls: break
@@ -230,7 +230,7 @@ class _PreloadMixin:
         self._send_count += 1
 
 
-class _FeaturesMixin:
+class _SharedVarsMixin:
     _poll_timeout = dict
 
     def __init__(self, *args, **xargs):
@@ -241,23 +241,23 @@ class _FeaturesMixin:
         super().on_disconnected()
         self._pending.clear()
         self._poll_timeout.clear()
-        for f in self.features.values(): f.unset()
+        for var in self.shared_vars.values(): var.unset()
 
-    def poll_feature(self, f, force=False):
-        """ poll feature value if not polled in same time frame or force is True """
-        if not force and (timeout := self._poll_timeout.get(f.call)) and timeout > datetime.now(): return
-        self._poll_timeout[f.call] = datetime.now()+timedelta(seconds=30)
-        f.poll_on_client()
+    def poll_shared_var_value(self, var, force=False):
+        """ poll shared variable value if not polled in same time frame or force is True """
+        if not force and (timeout := self._poll_timeout.get(var.call)) and timeout > datetime.now(): return
+        self._poll_timeout[var.call] = datetime.now()+timedelta(seconds=30)
+        var.poll_on_client()
 
-    def on_receive_feature_value(self, f, value): f.set(value)
+    def on_receive_shared_var_value(self, var, value): var.set(value)
 
-    def set_feature_value(self, f, value): f.remote_set(value)
+    def set_shared_var_value(self, var, value): var.remote_set(value)
 
 
 class _AbstractClient(ClientType, AbstractTarget):
     """
     Abstract Client
-    Note: Event callbacks (on_connect, on_feature_change) might be called in the mainloop
+    Note: Event callbacks (on_connect, on_shared_var_change) might be called in the mainloop
         and delay further command processing. Use threads for not blocking the
         mainloop.
     """
@@ -314,15 +314,15 @@ class _AbstractClient(ClientType, AbstractTarget):
         super().handle_uri_path(*args, **xargs)
 
 
-class AbstractClient(_PreloadMixin, _FeaturesMixin, _AbstractClient): pass
+class AbstractClient(_PreloadMixin, _SharedVarsMixin, _AbstractClient): pass
 
 
 class _AbstractSchemeMeta(ABCMeta):
 
     def __init__(cls, name, bases, dct):
         super().__init__(name, bases, dct)
-        cls.features = cls.features.copy()
-        cls.feature_categories = cls.feature_categories.copy()
+        cls.shared_vars = cls.shared_vars.copy()
+        cls.shared_var_categories = cls.shared_var_categories.copy()
 
     # the following methods are only available on class
 
@@ -336,35 +336,35 @@ class _AbstractSchemeMeta(ABCMeta):
         if args is None: args = getattr(cls.Server,"init_args_help",None)
         if args is not None: return ":".join((cls.scheme_id, *args))
 
-    def add_feature(cls, Feature=None, parent=None, overwrite=False):
+    def shared_var(cls, SharedVar=None, parent=None, overwrite=False):
         """
-        This is a decorator to be used on Feature class definitions that belong to the current class.
-        @overwrite: If true, proceeds if a feature with same id already exists.
+        This is a decorator to be used on shared variable class definitions that belong to the current class.
+        @overwrite: If true, proceeds if a shared variable with same id already exists.
         Example:
-            from features import Feature
-            @AbstractScheme.add_feature
-            class MyFeature(Feature): pass
+            from shared_vars import SharedVar
+            @AbstractScheme.shared_var
+            class MySharedVar(SharedVar): pass
         """
-        def add(Feature):
+        def add(SharedVar):
             if parent is None:
-                F = Feature
-            elif cls.features.get(parent.id) != parent:
+                Var = SharedVar
+            elif cls.shared_vars.get(parent.id) != parent:
                 raise ValueError(f"Parent {parent.id} does not exist in {cls}.")
             else:
-                F = Feature.as_child(parent)
-            if not issubclass(F, features.Feature):
-                raise TypeError(f"Feature must be of type {features.Feature}")
-            if F.id.startswith("_"): raise KeyError("Feature.id may not start with '_'")
-            if hasattr(cls.features.__class__, F.id):
-                raise KeyError("Feature.id `%s` is already occupied."%F.id)
-            if not overwrite and F.id in cls.features:
+                Var = SharedVar.as_child(parent)
+            if not issubclass(Var, shared_vars.SharedVar):
+                raise TypeError(f"Shared variable must be of type {shared_vars.SharedVar}")
+            if Var.id.startswith("_"): raise KeyError("SharedVar.id may not start with '_'")
+            if hasattr(cls.shared_vars.__class__, Var.id):
+                raise KeyError("SharedVar.id `%s` is already occupied."%Var.id)
+            if not overwrite and Var.id in cls.shared_vars:
                 raise KeyError(
-                    "Feature.id `%s` is already occupied. Use add_feature(overwrite=True)"%F.id)
-            cls.features.pop(F.id, None)
-            cls.features[F.id] = F
-            cls.feature_categories[F.category] = None
-            return Feature
-        return add(Feature) if Feature else add
+                    "SharedVar.id `%s` is already occupied. Use shared_var(overwrite=True)"%Var.id)
+            cls.shared_vars.pop(Var.id, None)
+            cls.shared_vars[Var.id] = Var
+            cls.shared_var_categories[Var.category] = None
+            return SharedVar
+        return add(SharedVar) if SharedVar else add
 
 
 class AbstractScheme(DiscoverySchemeMixin, SchemeType, metaclass=_AbstractSchemeMeta):
@@ -374,8 +374,8 @@ class AbstractScheme(DiscoverySchemeMixin, SchemeType, metaclass=_AbstractScheme
     Server = AbstractServer
     client_args_help = None # tuple, if None, will be read from Client.init_args_help
     server_args_help = None # tuple
-    features = features.Features()
-    feature_categories = dict()
+    shared_vars = shared_vars.SharedVars()
+    shared_var_categories = dict()
 
     @classmethod
     def _new_target(cls, base):
@@ -402,18 +402,18 @@ class AbstractScheme(DiscoverySchemeMixin, SchemeType, metaclass=_AbstractScheme
 
 
 class DummyServerMixin:
-    """ Server class that fills feature values with some values """
+    """ Server class that fills shared variable's values with some values """
 
-    def poll_feature(self, f, *args, **xargs): f.poll_on_dummy()
+    def poll_shared_var_value(self, var, *args, **xargs): var.poll_on_dummy()
 
-    def on_receive_feature_value(self, f, value):
-        if isinstance(f, features.NumericFeature) and not (f.min <= value <= f.max): return
-        f.set(value)
+    def on_receive_shared_var_value(self, var, value):
+        if isinstance(var, shared_vars.NumericVar) and not (var.min <= value <= var.max): return
+        var.set(value)
 
 
-@AbstractScheme.add_feature
-class Fallback(features.OfflineFeatureMixin, features.SelectFeature):
-    """ Matches always, if no other feature matched """
+@AbstractScheme.shared_var
+class Fallback(shared_vars.OfflineVarMixin, shared_vars.SelectVar):
+    """ Matches always, if no other shared variable matched """
     name = "Last Unexpected Message"
 
     def consume(self, data):
@@ -428,8 +428,8 @@ class Fallback(features.OfflineFeatureMixin, features.SelectFeature):
                 self.on_processed(data_)
 
 
-@AbstractScheme.add_feature
-class Name(features.OfflineFeatureMixin, features.SelectFeature):
+@AbstractScheme.shared_var
+class Name(shared_vars.OfflineVarMixin, shared_vars.SelectVar):
     
     def get(self): return self.target.Scheme.get_title()
     def is_set(self): return True

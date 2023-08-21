@@ -2,8 +2,8 @@ import pkgutil
 from gi.repository import Gtk, GObject, GdkPixbuf, Gio
 from ... import Target
 from ...core.util.autostart import Autostart
-from ...core import features
-from ..common import GladeGtk, gtk, config, id_to_string, APP_NAME, FeatureSelectorCombobox, FeatureValueCombobox, AbstractApp, autostart
+from ...core import shared_vars
+from ..common import GladeGtk, gtk, config, id_to_string, APP_NAME, SharedVarSelectorCombobox, SharedVarValueCombobox, AbstractApp, autostart
 from .target_setup import TargetSetup
 
 
@@ -39,18 +39,18 @@ class _Base(GladeGtk):
 
 class InputsMixin(TargetSetup):
     input_settings = [
-        ("power", features.BoolFeature),
-        ("muted", features.BoolFeature),
-        ("idle", features.BoolFeature),
-        ("source", features.SelectFeature),
-        ("volume", features.NumericFeature)
+        ("power", shared_vars.BoolVar),
+        ("muted", shared_vars.BoolVar),
+        ("idle", shared_vars.BoolVar),
+        ("source", shared_vars.SelectVar),
+        ("volume", shared_vars.NumericVar)
     ]
 
     def show(self, *args, **xargs):
         self.input_selectors = None
         super().show(*args, **xargs)
         self._setup_input_selectors()
-        for f, fc in self.input_selectors.items(): fc.set_active(config["target"]["features"][f"{f}_id"])
+        for f, fc in self.input_selectors.items(): fc.set_active(config["target"]["shared_vars"][f"{f}_id"])
 
     def on_window_prepare(self, assistant, page):
         super().on_window_prepare(assistant, page)
@@ -59,7 +59,7 @@ class InputsMixin(TargetSetup):
 
     def _setup_input_selectors(self):
         self.input_selectors = {
-            f:FeatureSelectorCombobox(self.target, self.builder.get_object(f"{f}_feature"), allow_types=(t,),
+            f:SharedVarSelectorCombobox(self.target, self.builder.get_object(f"{f}_var"), allow_types=(t,),
                 items=[("None", None)])
             for f, t in self.input_settings}
 
@@ -68,7 +68,7 @@ class InputsMixin(TargetSetup):
     def on_window_apply(self, *args):
         super().on_window_apply(*args)
         for f, fc in self.input_selectors.items():
-            config["target"]["features"][f"{f}_id"] = fc.get_active()
+            config["target"]["shared_vars"][f"{f}_id"] = fc.get_active()
         config.save()
 
 
@@ -88,7 +88,7 @@ class SourceMixin(InputsMixin):
             gtk(self._setup_source_selector)()
 
     def _setup_source_selector(self):
-        self.source_selector = FeatureValueCombobox(
+        self.source_selector = SharedVarValueCombobox(
             self.target, self.builder.get_object("source_value"), self.source_id, items=[("None", None)])
 
     def on_selector_changed(self, *args):
@@ -106,11 +106,11 @@ class SourceMixin(InputsMixin):
     def set_new_target(self):
         super().set_new_target()
         if self.target:
-            self.target.bind(on_feature_change = self.on_target_feature_change)
+            self.target.bind(on_shared_var_change = self.on_target_shared_var_change)
             self._update_source_id()
 
     @gtk
-    def on_target_feature_change(self, f_id, value):
+    def on_target_shared_var_change(self, f_id, value):
         if self.source_selector and f_id == self.source_id:
             self.source_selector.set_active(value)
 

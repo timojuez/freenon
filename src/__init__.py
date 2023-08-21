@@ -1,4 +1,4 @@
-from .core import config, AbstractScheme, AbstractServer, AbstractClient, features
+from .core import config, AbstractScheme, AbstractServer, AbstractClient, shared_vars
 from .info import *
 from .core.transmission.scheme_inventory import schemes, get_scheme, get_schemes, register_scheme
 

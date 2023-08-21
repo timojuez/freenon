@@ -7,7 +7,7 @@ from hificon import Target
 PROMPT = "Enter new volume: "
 
 
-def on_receive_feature_value(f, value):
+def on_receive_shared_var_value(f, value):
     print("Changed %s to %s."%(f.name, value))
     print(PROMPT)
 
@@ -22,13 +22,13 @@ if __name__ == "__main__":
     ## for testing:
     target = Target("emulate:denon")
 
-    target.features.volume.bind(on_set = lambda: print("Initially setting volume"))
-    target.bind(on_receive_feature_value = on_receive_feature_value)
+    target.shared_vars.volume.bind(on_set = lambda: print("Initially setting volume"))
+    target.bind(on_receive_shared_var_value = on_receive_shared_var_value)
     with target:
         target.connect()
         target.schedule(print_volume, requires=("volume",)) # this function needs target.volume -> schedule call
         while True:
             print(PROMPT)
             newvol = input()
-            if newvol: target.features.volume.remote_set(Decimal(newvol))
+            if newvol: target.shared_vars.volume.remote_set(Decimal(newvol))
 

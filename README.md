@@ -29,9 +29,9 @@
 
 - **A scheme** for communication is a plan that a server and client agree upon. It can be but not necessarily is a network protocol. Typically, different AVR manufacturers use their own scheme.
 - **A target** is an entity that communicates using a scheme. A network amplifier can be a target.
-- **A feature** is a variable that a target's scheme provides. It can be volume, power, etc.
+- **A shared variable** is a variable that a target's scheme provides. It can be volume, power, etc.
 - **A target URI** describes the connection to a target and has syntax `scheme:arg_0:...:arg_n`, where `scheme` is a class from ./src/schemes or of the form `[module.]scheme_class`. By default it is being read from the main.cfg. Example: `denon://192.168.1.5:23`
-- A URI can carry a **query string** `?part_0&...&part_m` at the end which will be processed once initially according to the given order. If `part` has the form `feature=value`, the target's feature `feature` will be set to `value`. If `part` has the form `command` then `command` will be sent to the target. Example usage: `hifish -xt '?power=1&source=DVD&MVUP'`
+- A URI can carry a **query string** `?part_0&...&part_m` at the end which will be processed once initially according to the given order. If `part` has the form `var=value`, the target's shared variable `var` will be set to `value`. If `part` has the form `command` then `command` will be sent to the target. Example usage: `hifish -xt '?power=1&source=DVD&MVUP'`
 
 
 ### Supported Schemes
@@ -96,14 +96,14 @@ Start HiFiCon Tray Control:
 
 ### HiFiCon Menu Control
 
-The menu lets you control all available features, e.g. sound mode, input, power, Audyssey settings, single speaker volume, etc. (depending on your target).
+The menu lets you control all available variables, e.g. sound mode, input, power, Audyssey settings, single speaker volume, etc. (depending on your target).
 
 `python3 -m hificon.menu`
 
 
 
 ### HiFiSh HiFi Shell
-HiFiSh is the HiFi Shell and it offers its own language called PyFiHiFi. PyFiHiFi is a Python dialect that is customised for programming with HiFiCon. It can read and write the target's features or run e.g. remote control actions (depending on the target).
+HiFiSh is the HiFi Shell and it offers its own language called PyFiHiFi. PyFiHiFi is a Python dialect that is customised for programming with HiFiCon. It can read and write the target's shared variables or run e.g. remote control actions (depending on the target).
 
 #### Starting HiFiSh
 Calling `hifish` without arguments will start the prompt.
@@ -112,10 +112,10 @@ Hifi scripts can be executed by `hifish FILE.hifi`
 
 See also `hifish -h` and the ./examples/.
 
-#### High level commands
-High level features are not scheme (resp. amp manufacturer) dependent and in the form `$feature` for reading and `$feature=value` for writing.
+#### Scheme Independent Programming
+Shared variable names are not scheme (resp. amp manufacturer) dependent and in the form `$var` for reading and `$var=value` for writing.
 Examples: `$volume += 5`, `$source = 'DVD'`, `$power = True`
-To see what features are being supported, type `help_features()` in hifish or call `hifish --help-features`
+To see what shared variables are being supported, type `help_vars()` in hifish or call `hifish --help-vars`
 
 #### Raw commands
 Raw commands can be sent to the target like `COMMAND`. If your command contains a space or special character (`;`) or if you need it's return value, use the alternative way `$"COMMAND"`. Examples: `MV50`, `PWON`, `$'PW?'`
@@ -133,8 +133,8 @@ target = Target()
 | HiFiSh | Python |
 | --- | --- |
 | `CMD` or `$"CMD"` or `$'CMD'` | `target.query("CMD", __return__); time.sleep(__wait__)` |
-| `$F` | `target.features.F.get()` |
-| `$F = value` | `target.features.F.remote_set(value)` |
+| `$var` | `target.shared_vars.var.get()` |
+| `$var = value` | `target.shared_vars.var.remote_set(value)` |
 | `wait(X)` | `time.sleep(X)` |
 
 If `__return__` is a callable, `$""` will return the received line from the target where `__return__(line) == True`.
@@ -144,7 +144,7 @@ If `__return__` is a callable, `$""` will return the received line from the targ
 
 The create_script tool helps to create HiFi scripts automatically or even to record remote control actions.
 
-Example 1: Record and repeat changing the feature values
+Example 1: Record and repeat changing the values of shared variables
 ```
 python3 -m hificon.create_script record --raw > my_script.hifi # start recording
 # now change the target's values that you want to store
@@ -158,7 +158,7 @@ python3 -m hificon.create_script -t emulate:denon full > example_script.hifi
 
 
 ### Server Software
-You can implement an own scheme or protocol. Client and Server is being implemented into one single class. Inherit e.g. the class AbstractScheme or SocketScheme. Pay attention to the methods `poll_feature` and `set_feature`.
+You can implement an own scheme or protocol. Client and Server are being implemented into one single class. Inherit e.g. the class AbstractScheme or SocketScheme. Pay attention to the methods `poll_shared_var_value` and `set_shared_var_value`.
 Start the server by running `python3 -m hificon.server --target SCHEME_MODULE.CLASS`
 
 If the prefix `emulate:` is being added to `--target`, a dummy server will be run for testing. You can connect to it using the clients mentioned above.

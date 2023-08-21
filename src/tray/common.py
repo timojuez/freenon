@@ -2,7 +2,7 @@ import gi, pkgutil, sys
 gi.require_version('Notify', '0.7')
 from gi.repository import GLib, Gtk, GObject, Notify, Gdk
 from contextlib import AbstractContextManager
-from ..core.transmission import features
+from ..core.transmission import shared_vars
 from ..core.config import YamlConfig
 from ..core.util import Bindable
 from ..core.util.autostart import Autostart
@@ -107,30 +107,30 @@ class HideOnUnfocusMixin(GladeGtk):
 class TrayConfig(YamlConfig):
 
     def __init__(self): super().__init__("tray.yml")
-    volume = property(lambda self: self["target"]["features"]["volume_id"])
-    muted = property(lambda self: self["target"]["features"]["muted_id"])
-    power = property(lambda self: self["target"]["features"]["power_id"])
-    source = property(lambda self: self["target"]["features"]["source_id"])
-    idle = property(lambda self: self["target"]["features"]["idle_id"])
-    tray_feature = property(lambda self: resolve_feature_id(self["tray"]["scroll_feature"]))
+    volume = property(lambda self: self["target"]["shared_vars"]["volume_id"])
+    muted = property(lambda self: self["target"]["shared_vars"]["muted_id"])
+    power = property(lambda self: self["target"]["shared_vars"]["power_id"])
+    source = property(lambda self: self["target"]["shared_vars"]["source_id"])
+    idle = property(lambda self: self["target"]["shared_vars"]["idle_id"])
+    tray_var = property(lambda self: resolve_shared_var_id(self["tray"]["scroll_var"]))
 
 
 config = TrayConfig()
 
 
-def resolve_feature_id(f_id):
-    return config["target"]["features"].get(f_id[1:]) if f_id and f_id.startswith("@") else f_id
+def resolve_shared_var_id(var_id):
+    return config["target"]["shared_vars"].get(var_id[1:]) if var_id and var_id.startswith("@") else var_id
 
-def id_to_feature(target, f_id):
-    if target: return target.features.get(f_id)
+def id_to_shared_var(target, var_id):
+    if target: return target.shared_vars.get(var_id)
 
-def id_to_string(target, f_id):
-    f_id = resolve_feature_id(f_id)
-    f = id_to_feature(target, f_id)
-    return f"{f.name} ({f.category})" if f else f"{f_id} (Unavailable)"
+def id_to_string(target, var_id):
+    var_id = resolve_shared_var_id(var_id)
+    f = id_to_shared_var(target, var_id)
+    return f"{f.name} ({f.category})" if f else f"{var_id} (Unavailable)"
 
 
-class _FeatureCombobox:
+class _SharedVarCombobox:
 
     def __init__(self, target, combobox, items=None):
         """ items: list [(name string, value any)]. Additional items that appear in the combobox """
@@ -186,38 +186,38 @@ class _FeatureCombobox:
     def __getattr__(self, name): return getattr(self.c, name)
 
 
-class FeatureSelectorCombobox(_FeatureCombobox):
+class SharedVarSelectorCombobox(_SharedVarCombobox):
 
-    def __init__(self, target, *args, allow_types=(features.Feature,), **xargs):
+    def __init__(self, target, *args, allow_types=(shared_vars.SharedVar,), **xargs):
         self._allow_types = allow_types
         super().__init__(target, *args, **xargs)
 
-    def _map_value(self, value): return [value, resolve_feature_id(value)]
+    def _map_value(self, value): return [value, resolve_shared_var_id(value)]
 
     def _fill(self):
         if self.target:
-            features_ = [f for f in self.target.features.values()
+            shared_vars_ = [f for f in self.target.shared_vars.values()
                 if any(isinstance(f, t) for t in self._allow_types)]
-            categories = {f.category:0 for f in features_}
+            categories = {f.category:0 for f in shared_vars_}
             category = {c:self.store.append(None, [c, -1, False]) for c in categories}
-            for f in features_: self.store.append(category[f.category], [f.name, f.id, True])
+            for f in shared_vars_: self.store.append(category[f.category], [f.name, f.id, True])
 
 
-class FeatureValueCombobox(_FeatureCombobox):
+class SharedVarValueCombobox(_SharedVarCombobox):
 
-    def __init__(self, target, c, f_id, **xargs):
-        self._feature = target.features.get(f_id) if target else None
+    def __init__(self, target, c, var_id, **xargs):
+        self._shared_var = target.shared_vars.get(var_id) if target else None
         super().__init__(target, c, **xargs)
-        if self._feature:
-            self._feature.bind(on_change=lambda *_: gtk(self.fill)())
-            self.target.preload_features.add(f_id)
-            if not self._feature.is_set():
-                try: self._feature.async_poll()
+        if self._shared_var:
+            self._shared_var.bind(on_change=lambda *_: gtk(self.fill)())
+            self.target.preload_shared_vars.add(var_id)
+            if not self._shared_var.is_set():
+                try: self._shared_var.async_poll()
                 except ConnectionError: pass
 
     def _fill(self):
-        if not self._feature: return
-        for val in self._feature.options: self.store.append(None, [str(val), val, True])
+        if not self._shared_var: return
+        for val in self._shared_var.options: self.store.append(None, [str(val), val, True])
 
 
 class NotificationBase(Bindable):

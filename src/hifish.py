@@ -6,7 +6,7 @@ from textwrap import TextWrapper
 from contextlib import suppress
 from decimal import Decimal
 from . import Target, get_schemes, PKG_NAME, VERSION, COPYRIGHT
-from .core import features
+from .core import shared_vars
 try: import readline
 except ImportError: pass
 
@@ -22,7 +22,7 @@ class CLI:
     def __init__(self):
         parser = argparse.ArgumentParser(description='HIFI SHELL')
         parser.add_argument("--help-schemes", action="store_true", help="show list of supported schemes and exit")
-        parser.add_argument("--help-features", metavar="SCHEME", action="store", const=1, nargs="?", help="show target's feature variables and exit")
+        parser.add_argument("--help-vars", metavar="SCHEME", action="store", const=1, nargs="?", help="show target's shared variables and exit")
         parser.add_argument('-t', '--target', metavar="URI", type=str, default=None, help='Target URI')
         group = parser.add_mutually_exclusive_group(required=False)
         group.add_argument('-f','--follow', default=False, action="store_true", help='Monitor received messages')
@@ -40,10 +40,10 @@ class CLI:
     def __call__(self):
         if self.args.help_schemes: return self.print_help_schemes()
         self.target = Target(self.args.target, verbose=self.args.verbose)
-        if self.args.help_features:
-            if self.args.help_features != 1:
-                self.target = Target(f"emulate:{self.args.help_features}")
-            return self.print_help_features()
+        if self.args.help_vars:
+            if self.args.help_vars != 1:
+                self.target = Target(f"emulate:{self.args.help_vars}")
+            return self.print_help_vars()
         matches = (lambda cmd:cmd.startswith(self.args.ret)) if self.args.ret else None
         if len(self.args.command) == 0 and not self.args.file and not self.args.exit: self.print_header()
         if self.args.follow: self.target.bind(on_receive_raw_data=self.receive)
@@ -55,9 +55,9 @@ class CLI:
                 __wait__ = .1,
                 Decimal = Decimal,
                 target = self.target,
-                features = FeaturesProperties(self.target),
+                shared_vars = SharedVarsProperties(self.target),
                 help = self.print_help,
-                help_features = self.print_help_features,
+                help_vars = self.print_help_vars,
             )
             for cmd in self.args.command: self.compiler.run(cmd)
             if self.args.file: self.parse_file()
@@ -91,12 +91,12 @@ class CLI:
         help = [
             ("Internal functions:", [
                 ("help()","Show help"),
-                ("help_features()", "Show features list"),
+                ("help_vars()", "Show list of shared variables"),
                 ("wait(seconds)","Sleep given amount of seconds"),
                 ("exit()","Quit")]),
             ("High level functions (scheme independent)", [
-                ("$feature", "Variable that contains target's attribute, potentially read and writeable"),
-                ("To see a list of features, type help_features()","")]),
+                ("$var", "Variable that contains target's attribute, potentially read and writeable"),
+                ("To see a list of shared variables, type help_vars()","")]),
             ("Low level functions (scheme dependent)",
                 [("CMD or $'CMD'", "Send CMD to the target and return answer")])
         ]
@@ -121,20 +121,20 @@ class CLI:
             print()
             #print(tw.fill("%-20s%-20s%s"%(bright(p), S.scheme_id, getattr(S, "help", ""))))
 
-    def print_help_features(self):
+    def print_help_vars(self):
         tw = TextWrapper(
             initial_indent=" "*8, subsequent_indent=" "*12, width=shutil.get_terminal_size().columns)
-        print(f"Scheme '{self.target.scheme_id}' supports the following features.\n")
-        features_ = map(self.target.features.get, self.target.__class__.features.keys())
-        features_ = sorted(features_, key=lambda f: (f.category, f.id))
-        for category, ff in groupby(features_, key=lambda f:f.category):
+        print(f"Scheme '{self.target.scheme_id}' supports the following variables.\n")
+        shared_vars_ = map(self.target.shared_vars.get, self.target.__class__.shared_vars.keys())
+        shared_vars_ = sorted(shared_vars_, key=lambda f: (f.category, f.id))
+        for category, ff in groupby(shared_vars_, key=lambda f:f.category):
             print(bright(category.upper()))
             for f in ff:
                 print(bright(f"    ${f.id}"))
                 s = f"{(f.name)}  {(f.type.__name__)}  "
-                if isinstance(f,features.NumericFeature):
+                if isinstance(f, shared_vars.NumericVar):
                     s += f"[{f.min}..{f.max}]"
-                elif isinstance(f,features.SelectFeature):
+                elif isinstance(f, shared_vars.SelectVar):
                     s += str(f.options)
                 print(tw.fill(s))
             print()
@@ -200,21 +200,21 @@ class CommandTransformation(ast.NodeTransformer):
         return r
 
 
-class FeaturesProperties:
+class SharedVarsProperties:
 
     def __init__(self, target):
         super().__setattr__("_target", target)
 
-    def __dir__(self): return self._target.features.keys()
+    def __dir__(self): return self._target.shared_vars.keys()
 
     def __getattr__(self, name):
-        try: return self._target.features[name].get_wait()
+        try: return self._target.shared_vars[name].get_wait()
         except KeyError as e: raise AttributeError(e)
 
     def __setattr__(self, name, value):
-        try: f = self._target.features[name]
+        try: f = self._target.shared_vars[name]
         except KeyError as e: raise AttributeError(e)
-        self._target.set_feature_value(f, value)
+        self._target.set_shared_var_value(f, value)
 
 
 class Preprocessor:
@@ -226,7 +226,7 @@ class Preprocessor:
         ("?",   ("__quest__",       "__quest__")),
         ("$'",  ("'__dollar1__",    "__dollar1__")),
         ('$"',  ('"__dollar2__',    "__dollar2__")),
-        ("$",   ("features.",       "features.")),
+        ("$",   ("shared_vars.",    "shared_vars.")),
     ]
     
     def __init__(self, source):

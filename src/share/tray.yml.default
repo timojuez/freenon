@@ -11,8 +11,8 @@ power_control:
     poweroff_notification_timeout: 8
 
 target:
-    features:
-        # Feature ids to be controlled by this program:
+    shared_vars:
+        # Shared variable ids to be controlled by this program:
         power_id: power
         source_id: source
         volume_id: volume
@@ -35,8 +35,8 @@ notifications:
 
 tray:
     scroll_delta: 2.0
-    scroll_feature: '@volume_id'
-    menu_features:
+    scroll_var: '@volume_id'
+    menu_vars:
         - '@volume_id'
         - '@power_id'
         - sound_mode
@@ -46,20 +46,20 @@ tray:
 hotkeys:
     # keyboard hotkey options
     keyboard:
-      - feature: '@volume_id'
+      - var: '@volume_id'
         step: -3
         key: <ctrl>+<media_volume_down>
-      - feature: '@volume_id'
+      - var: '@volume_id'
         step: 3
         key: <ctrl>+<media_volume_up>
-      - feature: '@muted_id'
+      - var: '@muted_id'
         step: 3
         key: <ctrl>+<media_volume_mute>
 
     # mouse gesture options
     mouse:
       - button: 9
-        feature: '@volume_id'
+        var: '@volume_id'
         sensitivity: 60
         max_step: 8
     # Wait @mouse_delay milliseconds after each volume change
