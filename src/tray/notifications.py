@@ -125,21 +125,21 @@ class NotificationMixin(TrayMixin, KeyBinding, PowerControlMixin, TargetApp):
         self._power_notifications.append(self._poweron_n2)
         self.target.preload_shared_vars.update(("name", config.power))
 
-    def create_notification(self, f):
-        if isinstance(f, shared_vars.NumericVar): return NumericNotification(self.scale_popup, f,
-            default_click_action=lambda: self.on_notification_clicked(f))
-        if isinstance(f, shared_vars.SelectVar): return TextNotification(f,
-            default_click_action=lambda: self.on_notification_clicked(f))
+    def create_notification(self, var):
+        if isinstance(var, shared_vars.NumericVar): return NumericNotification(self.scale_popup, var,
+            default_click_action=lambda: self.on_notification_clicked(var))
+        if isinstance(var, shared_vars.SelectVar): return TextNotification(var,
+            default_click_action=lambda: self.on_notification_clicked(var))
 
-    def on_notification_clicked(self, f):
+    def on_notification_clicked(self, var):
         dialog = Gtk.MessageDialog(
             message_type=Gtk.MessageType.QUESTION,
             buttons=Gtk.ButtonsType.OK_CANCEL,
-            text=f"Disable notifications for '{f.name}'?",
+            text=f"Disable notifications for '{var.name}'?",
         )
         response = dialog.run()
         if response == Gtk.ResponseType.OK:
-            self.settings.notification_blacklist.add_item(f.id)
+            self.settings.notification_blacklist.add_item(var.id)
         dialog.destroy()
 
     def show_notification(self, var_id):
@@ -176,8 +176,8 @@ class NotificationMixin(TrayMixin, KeyBinding, PowerControlMixin, TargetApp):
         super().on_hotkey_press(data)
 
     def show_notification_on_shared_var_change(self, var_id, value): # bound to target
-        f = self.target.shared_vars[var_id]
-        if f._prev_val is not None and f.is_set(): self.show_notification(var_id)
+        var = self.target.shared_vars[var_id]
+        if var._prev_val is not None and var.is_set(): self.show_notification(var_id)
 
     def on_scroll_up(self, *args, **xargs):
         self.show_notification(config.tray_var)

@@ -126,16 +126,16 @@ class CLI:
             initial_indent=" "*8, subsequent_indent=" "*12, width=shutil.get_terminal_size().columns)
         print(f"Scheme '{self.target.scheme_id}' supports the following variables.\n")
         shared_vars_ = map(self.target.shared_vars.get, self.target.__class__.shared_vars.keys())
-        shared_vars_ = sorted(shared_vars_, key=lambda f: (f.category, f.id))
-        for category, ff in groupby(shared_vars_, key=lambda f:f.category):
+        shared_vars_ = sorted(shared_vars_, key=lambda var: (var.category, var.id))
+        for category, vars_ in groupby(shared_vars_, key=lambda var:var.category):
             print(bright(category.upper()))
-            for f in ff:
-                print(bright(f"    ${f.id}"))
-                s = f"{(f.name)}  {(f.type.__name__)}  "
-                if isinstance(f, shared_vars.NumericVar):
-                    s += f"[{f.min}..{f.max}]"
-                elif isinstance(f, shared_vars.SelectVar):
-                    s += str(f.options)
+            for var in vars_:
+                print(bright(f"    ${var.id}"))
+                s = f"{(var.name)}  {(var.type.__name__)}  "
+                if isinstance(var, shared_vars.NumericVar):
+                    s += f"[{var.min}..{var.max}]"
+                elif isinstance(var, shared_vars.SelectVar):
+                    s += str(var.options)
                 print(tw.fill(s))
             print()
     
@@ -212,9 +212,9 @@ class SharedVarsProperties:
         except KeyError as e: raise AttributeError(e)
 
     def __setattr__(self, name, value):
-        try: f = self._target.shared_vars[name]
+        try: var = self._target.shared_vars[name]
         except KeyError as e: raise AttributeError(e)
-        self._target.set_shared_var_value(f, value)
+        self._target.set_shared_var_value(var, value)
 
 
 class Preprocessor:

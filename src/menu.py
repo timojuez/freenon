@@ -37,7 +37,7 @@ class TabPanel(ScrollView):
         super().__init__()
         self.shared_vars = {}
         pinned = {True:[], False:[]}
-        for f in self.target.shared_vars.values(): pinned[var.id in self.config["pinned"]].append(var)
+        for var in self.target.shared_vars.values(): pinned[var.id in self.config["pinned"]].append(var)
         self._vars_stack = [*pinned[True], *pinned[False]]
         self.addSharedVarsFromStack(chunksize=50, repeat=None)
         
@@ -65,8 +65,8 @@ class TabPanel(ScrollView):
         if w: row.ids.content.add_widget(w)
         
         def on_checkbox(checkbox, active):
-            if active: self.config["pinned"].append(f.id)
-            else: self.config["pinned"].remove(f.id)
+            if active: self.config["pinned"].append(var.id)
+            else: self.config["pinned"].remove(var.id)
             self.config.save()
         row.ids.checkbox.bind(active=on_checkbox)
 
@@ -236,7 +236,7 @@ class SelectVarOption(Button): pass
 
 class PinnedTab(CategoryTabHeader):
     text = "Pinned"
-    filter = lambda self,f: f.id in self.panel.config["pinned"]
+    filter = lambda self,var: var.id in self.panel.config["pinned"]
 
 class AllTab(CategoryTabHeader):
     text = "All"
@@ -354,7 +354,7 @@ class MenuScreen(_MenuScreen):
         self.ids.headers.add_widget(e)
 
     def _newTab(self, category):
-        def filter(f, category=category): return f.category == category
+        def filter(var, category=category): return var.category == category
         header = CategoryTabHeader(self, text=category, filter=filter)
         self.ids.headers.add_widget(header)
         return header

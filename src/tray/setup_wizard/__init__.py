@@ -39,18 +39,19 @@ class _Base(GladeGtk):
 
 class InputsMixin(TargetSetup):
     input_settings = [
-        ("power", shared_vars.BoolVar),
-        ("muted", shared_vars.BoolVar),
-        ("idle", shared_vars.BoolVar),
-        ("source", shared_vars.SelectVar),
-        ("volume", shared_vars.NumericVar)
+        # v name,   type
+        ("power",   shared_vars.BoolVar),
+        ("muted",   shared_vars.BoolVar),
+        ("idle",    shared_vars.BoolVar),
+        ("source",  shared_vars.SelectVar),
+        ("volume",  shared_vars.NumericVar)
     ]
 
     def show(self, *args, **xargs):
         self.input_selectors = None
         super().show(*args, **xargs)
         self._setup_input_selectors()
-        for f, fc in self.input_selectors.items(): fc.set_active(config["target"]["shared_vars"][f"{f}_id"])
+        for v, sel in self.input_selectors.items(): sel.set_active(config["target"]["shared_vars"][f"{v}_id"])
 
     def on_window_prepare(self, assistant, page):
         super().on_window_prepare(assistant, page)
@@ -59,16 +60,16 @@ class InputsMixin(TargetSetup):
 
     def _setup_input_selectors(self):
         self.input_selectors = {
-            f:SharedVarSelectorCombobox(self.target, self.builder.get_object(f"{f}_var"), allow_types=(t,),
+            v:SharedVarSelectorCombobox(self.target, self.builder.get_object(f"{v}_var"), allow_types=(t,),
                 items=[("None", None)])
-            for f, t in self.input_settings}
+            for v, t in self.input_settings}
 
     def on_selector_changed(self, *args): pass
 
     def on_window_apply(self, *args):
         super().on_window_apply(*args)
-        for f, fc in self.input_selectors.items():
-            config["target"]["shared_vars"][f"{f}_id"] = fc.get_active()
+        for v, sel in self.input_selectors.items():
+            config["target"]["shared_vars"][f"{v}_id"] = sel.get_active()
         config.save()
 
 
@@ -100,7 +101,7 @@ class SourceMixin(InputsMixin):
         if source_id == self.source_id: return
         self.source_id = source_id
         if self.target and self.source_id and self.source_selector:
-            self.target.schedule(gtk(lambda f: self.source_selector.set_active(f.get())),
+            self.target.schedule(gtk(lambda var: self.source_selector.set_active(var.get())),
                 requires=(self.source_id,))
 
     def set_new_target(self):
@@ -110,8 +111,8 @@ class SourceMixin(InputsMixin):
             self._update_source_id()
 
     @gtk
-    def on_target_shared_var_change(self, f_id, value):
-        if self.source_selector and f_id == self.source_id:
+    def on_target_shared_var_change(self, var_id, value):
+        if self.source_selector and var_id == self.source_id:
             self.source_selector.set_active(value)
 
     def on_window_apply(self, *args):

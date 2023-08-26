@@ -62,18 +62,18 @@ class KeyBinding(TargetApp):
 
     def on_hotkey_press(self, data):
         if self.verbose >= 5: print(f"[{self.__class__.__name__}] Hotkey pressed:", data)
-        def func(f):
-            if f.type == bool: f.remote_set(not f.get())
-            else: f.remote_set(max(f.min, min(f.max, f.get()+f.type(data["conf"]["step"]))))
-        self.target.schedule(func, requires=(data["f_id"],))
+        def func(var):
+            if var.type == bool: var.remote_set(not var.get())
+            else: var.remote_set(max(var.min, min(var.max, var.get()+var.type(data["conf"]["step"]))))
+        self.target.schedule(func, requires=(data["var_id"],))
 
-    def get_current_gesture_f_id(self):
+    def get_current_gesture_var_id(self):
         if g := self.input_listener.get_current_gesture():
-            return g["f_id"]
+            return g["var_id"]
 
-    def on_gesture_shared_var_change(self, f_id, val):
+    def on_gesture_shared_var_change(self, var_id, val):
         """ target's shared var changed """
-        if f_id != self.get_current_gesture_f_id(): return
+        if var_id != self.get_current_gesture_var_id(): return
         self._shared_var_changed.set()
 
     def set_position_reference(self, y, vol):
@@ -86,28 +86,28 @@ class KeyBinding(TargetApp):
         self._mouse_gesture_thread_data = None, None
         this = self._mouse_down_count = (self._mouse_down_count+1)%100
         self._position_ref = None
-        def func(f):
+        def func(var):
             if self._mouse_down_count != this: return # check if this is the most recent call
-            self.set_position_reference(y, f.get())
-        self.target.schedule(func, requires=(gesture["f_id"],))
+            self.set_position_reference(y, var.get())
+        self.target.schedule(func, requires=(gesture["var_id"],))
 
     def on_mouse_up(self, gesture, x, y):
         self._shared_var_changed.set() # break _shared_var_changed.wait()
 
     def on_activated_mouse_move(self, gesture, x, y):
-        if (f := self.target.shared_vars.get(gesture["f_id"])) is None: return
+        if (var := self.target.shared_vars.get(gesture["var_id"])) is None: return
         if self._position_ref is None: return
         screen_height = get_screen_size(Gdk.Display.get_default())[1]
         new_value = self._position_ref-int((y-self._y_ref)/screen_height*gesture["conf"]["sensitivity"])
         if self._mouse_gesture_thread_data == (new_value, gesture): return
         max_step = Decimal(gesture["conf"]["max_step"])
-        try: max_ = f.get()+max_step
+        try: max_ = var.get()+max_step
         except ConnectionError: return
         if self.verbose >= 1 and new_value > max_:
             print(f"[{self.__class__.__name__}] "
                 f"Mouse gesture: New value {new_value} exceeds max step ({max_step})", file=sys.stderr)
-        max_ = min(f.max, max_)
-        min_ = f.min
+        max_ = min(var.max, max_)
+        min_ = var.min
         if new_value > max_ or new_value < min_:
             # mouse has been moved to an illegal point
             new_value = max(min_, min(max_, new_value))
@@ -123,14 +123,14 @@ class KeyBinding(TargetApp):
             with self._set_shared_var_lock:
                 self._mouse_gesture_thread_evt.clear()
                 new_value, gesture = self._mouse_gesture_thread_data
-            if f := self.target.shared_vars.get(gesture["f_id"]):
-                try: self._update_shared_var_value(f, new_value)
+            if var := self.target.shared_vars.get(gesture["var_id"]):
+                try: self._update_shared_var_value(var, new_value)
                 except ConnectionError: pass
 
-    def _update_shared_var_value(self, f, new_value):
-        if new_value in (None, f.get()): return
+    def _update_shared_var_value(self, var, new_value):
+        if new_value in (None, var.get()): return
         self._shared_var_changed.clear()
-        try: f.remote_set(new_value)
+        try: var.remote_set(new_value)
         except: traceback.print_exc()
         sleep()
         self._shared_var_changed.wait(.2) # wait for on_shared_var_change
@@ -168,7 +168,7 @@ class InputDeviceListener(Bindable, AbstractContextManager):
         gestures = [e for e in config["hotkeys"]["mouse"] if e["button"] in self._buttons]
         if gestures:
             conf = gestures[0]
-            return {"conf": conf, "f_id": resolve_shared_var_id(conf["var"])}
+            return {"conf": conf, "var_id": resolve_shared_var_id(conf["var"])}
 
     def on_mouse_click(self, x, y, button, pressed):
         if pressed: self._buttons.append(button.value)
@@ -201,7 +201,7 @@ class InputDeviceListener(Bindable, AbstractContextManager):
     def on_hotkey_press(self, data): pass
 
     def _start_hotkey_listener(self):
-        fire = lambda ks: self.on_hotkey_press({"f_id": resolve_shared_var_id(ks["var"]), "conf": ks})
+        fire = lambda ks: self.on_hotkey_press({"var_id": resolve_shared_var_id(ks["var"]), "conf": ks})
         try: self.hotkey_listener = keyboard.GlobalHotKeys(
             {ks["key"]: lambda ks=ks: fire(ks) for ks in config["hotkeys"]["keyboard"] if ks["key"]})
         except ValueError: traceback.print_exc()

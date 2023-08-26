@@ -126,8 +126,8 @@ def id_to_shared_var(target, var_id):
 
 def id_to_string(target, var_id):
     var_id = resolve_shared_var_id(var_id)
-    f = id_to_shared_var(target, var_id)
-    return f"{f.name} ({f.category})" if f else f"{var_id} (Unavailable)"
+    var = id_to_shared_var(target, var_id)
+    return f"{var.name} ({var.category})" if var else f"{var_id} (Unavailable)"
 
 
 class _SharedVarCombobox:
@@ -196,11 +196,11 @@ class SharedVarSelectorCombobox(_SharedVarCombobox):
 
     def _fill(self):
         if self.target:
-            shared_vars_ = [f for f in self.target.shared_vars.values()
-                if any(isinstance(f, t) for t in self._allow_types)]
-            categories = {f.category:0 for f in shared_vars_}
+            shared_vars_ = [var for var in self.target.shared_vars.values()
+                if any(isinstance(var, t) for t in self._allow_types)]
+            categories = {var.category:0 for var in shared_vars_}
             category = {c:self.store.append(None, [c, -1, False]) for c in categories}
-            for f in shared_vars_: self.store.append(category[f.category], [f.name, f.id, True])
+            for var in shared_vars_: self.store.append(category[var.category], [var.name, var.id, True])
 
 
 class SharedVarValueCombobox(_SharedVarCombobox):

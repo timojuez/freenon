@@ -329,8 +329,8 @@ class TrayMixin(Tray):
         self.scale_popup.set_image(path)
         self.set_icon(path, name)
 
-    def _save_set_shared_var_to_relative_value(self, f_id, add):
-        var = self.target.shared_vars.get(f_id)
+    def _save_set_shared_var_to_relative_value(self, var_id, add):
+        var = self.target.shared_vars.get(var_id)
         if not var or not var.is_set(): return
         try:
             value = var.get()+add

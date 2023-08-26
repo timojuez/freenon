@@ -67,8 +67,8 @@ class HotkeySetting(_Shortcut):
         self.app.app_manager.main_app.input_listener.refresh_hotkeys()
 
     def show_spin(self, w=None):
-        f = self.app.target.shared_vars.get(resolve_shared_var_id(self.conf["var"]))
-        if f is not None and f.type != bool: self.spin.show()
+        var = self.app.target.shared_vars.get(resolve_shared_var_id(self.conf["var"]))
+        if var is not None and var.type != bool: self.spin.show()
         else: self.spin.hide()
 
     def on_hotkey_button_clicked(self, widget, i):

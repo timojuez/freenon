@@ -248,7 +248,7 @@ class AsyncSharedVar(SharedVarInterface, Bindable, metaclass=_MetaVar):
         if self.dummy_value is not None: val = self.dummy_value
         elif self.default_value is not None: val = self.default_value
         else: raise ValueError("Shared variable %s has no dummy value."%self.id)
-        #self.on_receive_raw_data(f.serialize(val)) # TODO: handle cases where f.call matches but f.matches() is False and maybe f'.matches() is True
+        #self.on_receive_raw_data(self.serialize(val)) # TODO: handle cases where var.call matches but var.matches() is False and maybe var'.matches() is True
         self.set(val)
 
     def _set_default(self):

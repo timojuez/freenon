@@ -215,13 +215,13 @@ class _PreloadMixin:
         if not self._preload_shared_vars_iter: self._preload_shared_vars_iter = iter(self.preload_shared_vars)
         self._send_count = 0
         for _ in range(max_polls*100):
-            try: f_id = next(self._preload_shared_vars_iter)
+            try: var_id = next(self._preload_shared_vars_iter)
             except StopIteration:
                 self._preload_shared_vars_iter = None
                 self._preload_iteration_completed = True
                 break
-            if (f := self.shared_vars.get(f_id)) and not f.is_set():
-                try: f.async_poll()
+            if (var := self.shared_vars.get(var_id)) and not var.is_set():
+                try: var.async_poll()
                 except ConnectionError: break
             if self._send_count >= max_polls: break
 

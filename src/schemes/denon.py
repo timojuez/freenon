@@ -516,7 +516,7 @@ class SourceNames(ListVar): #undocumented
     TERMINATOR = " END"
     function = "SSFUN"
     call = "SSFUN ?"
-    default_value = {code: "% -12s"%name for code, f_id, name in SOURCES}
+    default_value = {code: "% -12s"%name for code, var_id, name in SOURCES}
     def remote_set(self, *args, **xargs): raise RuntimeError("Cannot set value! Set source instead")
     def serialize(self, d): return super().serialize([" ".join(e) for e in d.items()])
     def unserialize(self, data): return dict([line.split(" ",1) for line in super().unserialize(data)])
@@ -549,11 +549,11 @@ class SpeakerLevelBlock(VarBlock):
     category = Category.SPEAKERS
 
 
-for code, f_id, name in SPEAKERS:
+for code, var_id, name in SPEAKERS:
     @Denon.shared_var(parent=SpeakerLevelBlock)
     class SpeakerLevel(RelativeDecimalVar): #undocumented
         name = f"{name} Level"
-        id = f"{f_id}_level"
+        id = f"{var_id}_level"
         category = Category.SPEAKERS
         function = f"{code} "
 
@@ -570,11 +570,11 @@ class ChannelVolumeBlock(VarBlock):
     category = Category.VOLUME
 
 
-for code, f_id, name in SPEAKERS:
+for code, var_id, name in SPEAKERS:
     @Denon.shared_var(parent=ChannelVolumeBlock)
     class ChannelVolume(RelativeDecimalVar):
         name = f"{name} Volume"
-        id = f"{f_id}_volume"
+        id = f"{var_id}_volume"
         category = Category.VOLUME
         function = f"{code} "
 
@@ -653,7 +653,7 @@ class SoundModeCall(_SoundModeSettings, DenonVar, shared_vars.SharedVar):
 
     def resend(self):
         if isinstance(self.target, ServerType):
-            self.target.schedule(lambda f: f.resend(), requires=(SoundModeSettings.id,))
+            self.target.schedule(lambda var: var.resend(), requires=(SoundModeSettings.id,))
         else: super().resend()
 
 
@@ -674,11 +674,11 @@ class SoundModeSettings(_SoundModeSettings, ListVar): # according to current sou
     def unserialize(self, data): return {e[:3]: e[3:] for e in super().unserialize(data)}
 
     def resend(self):
-        self.target.schedule(lambda f: super(SoundModeSettings, self).resend(),
+        self.target.schedule(lambda var: super(SoundModeSettings, self).resend(),
             requires=("sound_mode_setting",))
 
     def remote_set(self, *args, **xargs):
-        self.target.schedule(lambda f: super(SoundModeSettings, self).remote_set(*args, **xargs),
+        self.target.schedule(lambda var: super(SoundModeSettings, self).remote_set(*args, **xargs),
             requires=("sound_mode_setting",))
 
 
@@ -1045,11 +1045,11 @@ class CrossoverAll(_Crossover): #undocumented
     name = "Crossover (all)"
     function = "ALL "
 
-for code, f_id, name in SPEAKER_PAIRS:
+for code, var_id, name in SPEAKER_PAIRS:
     @Denon.shared_var(parent=CrossoverBlock)
     class CrossoverSpeaker(_Crossover): #undocumented
         name = f"Crossover ({name})"
-        id = f"crossover_{f_id}"
+        id = f"crossover_{var_id}"
         function = f"{code} "
 
 @Denon.shared_var(parent=CrossoverBlock)
@@ -1223,11 +1223,11 @@ class InputVisibilityBlock(VarBlock):
     call = "SSSOD ?"
 
 
-for code, f_id, name in SOURCES:
+for code, var_id, name in SOURCES:
     @Denon.shared_var(parent=InputVisibilityBlock)
     class InputVisibility(BoolVar): #undocumented
         name = f"Enable {name} Input"
-        id = f"enable_{f_id}"
+        id = f"enable_{var_id}"
         category = Category.INPUT
         function = f"{code} "
         translation = {"USE":True, "DEL":False}
@@ -1245,11 +1245,11 @@ class SourceVolumeLevelBlock(VarBlock):
     category = Category.INPUT
 
 
-for code, f_id, name in SOURCES:
+for code, var_id, name in SOURCES:
     @Denon.shared_var(parent=SourceVolumeLevelBlock)
     class SourceVolumeLevel(RelativeIntVar): #undocumented
         name = f"{name} Volume Level"
-        id = f"{f_id}_volume_level"
+        id = f"{var_id}_volume_level"
         category = Category.INPUT
         min = -12
         max = 12
@@ -1279,11 +1279,11 @@ class SpeakerDistanceStep(SelectVar): #undocumented
     translation = {"01M": "0.1m", "02M": "0.01m", "01F": "1ft", "02F": "0.1ft"}
 
 
-for code, f_id, name in SPEAKERS:
+for code, var_id, name in SPEAKERS:
     @Denon.shared_var(parent=SpeakerDistanceBlock)
     class SpeakerDistance(IntVar): #undocumented
         name = f"{name} Distance"
-        id = f"{f_id}_distance"
+        id = f"{var_id}_distance"
         category = Category.SPEAKERS
         min = 0
         max = 1800

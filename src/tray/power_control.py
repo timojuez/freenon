@@ -30,16 +30,18 @@ class Base(TargetApp, TargetController):
         super().on_stop_playing()
         # execute on_idle() if target is not playing
         try: target_playing = (
-            self.target.shared_vars[config.idle].is_set() and self.target.shared_vars[config.idle].get() == False
-            and self.target.shared_vars[config.power].is_set() and self.target.shared_vars[config.power].get() == True
+            self.target.shared_vars[config.idle].is_set()
+            and self.target.shared_vars[config.idle].get() == False
+            and self.target.shared_vars[config.power].is_set()
+            and self.target.shared_vars[config.power].get() == True
             )
         except (ConnectionError, KeyError): target_playing = False
         if not target_playing: self.on_idle()
-        try: f = self.target.shared_vars[config.idle]
+        try: var = self.target.shared_vars[config.idle]
         except KeyError: pass
         else:
-            if not f.is_set():
-                try: f.async_poll()
+            if not var.is_set():
+                try: var.async_poll()
                 except ConnectionError: pass
 
     def on_idle(self): pass
@@ -48,10 +50,10 @@ class Base(TargetApp, TargetController):
         """ when starting to play something locally or on amp """
         pass
 
-    def on_target_shared_var_change(self, f_id, value):
-        if f_id == config.power:
+    def on_target_shared_var_change(self, var_id, value):
+        if var_id == config.power:
             self.on_target_power_change(value)
-        elif f_id == config.idle:
+        elif var_id == config.idle:
             if value == True: self.on_idle()
             else: self.on_unidle()
 

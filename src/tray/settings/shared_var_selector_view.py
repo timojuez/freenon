@@ -63,7 +63,7 @@ class AvailableVarsList:
         if self.target:
             avail_list = AvailTreeStore(view, GObject.TYPE_PYOBJECT)
             category = {c:avail_list.append(None, [c]) for c in self.target.shared_var_categories}
-            for f in self.target.shared_vars.values(): avail_list.append(category[f.category], [f])
+            for var in self.target.shared_vars.values(): avail_list.append(category[var.category], [var])
             view.set_model(avail_list)
             cell = Gtk.CellRendererText()
             column.set_cell_data_func(cell, self._set_avail_cell_text)
@@ -112,49 +112,49 @@ class SelectedVarsList(Bindable):
             Gdk.ModifierType.BUTTON1_MASK, self.dnd_from_menu, Gdk.DragAction.MOVE)
         view.enable_model_drag_dest(self.dnd_from_avail+self.dnd_from_menu, Gdk.DragAction.MOVE)
 
-    def on_change(self, f_ids): pass
+    def on_change(self, var_ids): pass
 
-    def _update_listeners(self, f_ids):
-        shared_vars = [f for f_id in f_ids for f in
-            [id_to_shared_var(self.target, resolve_shared_var_id(f_id))] if f]
+    def _update_listeners(self, var_ids):
+        shared_vars = [var for var_id in var_ids for var in
+            [id_to_shared_var(self.target, resolve_shared_var_id(var_id))] if var]
         self.on_change(shared_vars)
 
     def get_value(self): return self._value
 
-    def set_value(self, f_ids):
-        self._value = f_ids
+    def set_value(self, var_ids):
+        self._value = var_ids
         self.menu_list.clear()
-        for f_id in f_ids: self.menu_list.append([f_id])
-        self._update_listeners(f_ids)
+        for var_id in var_ids: self.menu_list.append([var_id])
+        self._update_listeners(var_ids)
 
-    def add_item(self, f_id):
-        self.set_value([*self.get_value(), f_id])
+    def add_item(self, var_id):
+        self.set_value([*self.get_value(), var_id])
 
     def _set_menu_cell_text(self, column, cell, model, it, data):
-        f_id = model.get_value(it, 0)
-        s = id_to_string(self.target, f_id)
+        var_id = model.get_value(it, 0)
+        s = id_to_string(self.target, var_id)
         cell.set_property('text', s)
 
     def on_menu_view_drag_data_received(self, treeview, context, x, y, selection, info, timestamp):
-        f_id = selection.get_text()
-        if f_id in self._value: return context.finish(False, False, timestamp) # reject
+        var_id = selection.get_text()
+        if var_id in self._value: return context.finish(False, False, timestamp) # reject
         drop_info = treeview.get_dest_row_at_pos(x, y)
         if drop_info:
             path, pos = drop_info
             drop_before = pos in (Gtk.TreeViewDropPosition.BEFORE, Gtk.TreeViewDropPosition.INTO_OR_BEFORE)
             insert = (self.menu_list.insert_before if drop_before
                 else self.menu_list.insert_after)
-            insert(self.menu_list.get_iter(path), [f_id])
+            insert(self.menu_list.get_iter(path), [var_id])
             #widget.stop_emission('drag_data_received')
         else:
-            self.menu_list.append([f_id])
+            self.menu_list.append([var_id])
         context.finish(True, info == self.dnd_from_menu_info, timestamp)
         self.on_selected_vars_change()
 
     def on_selected_vars_change(self):
-        f_ids = [row[0] for row in self.menu_list]
-        self._value = f_ids
-        self._update_listeners(f_ids)
+        var_ids = [row[0] for row in self.menu_list]
+        self._value = var_ids
+        self._update_listeners(var_ids)
 
     def on_menu_view_drag_drop(self, treeview, context, x, y, time):
         context.finish(True, False, time)
