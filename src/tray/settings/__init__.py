@@ -24,7 +24,7 @@ class TrayIconMixin:
         super().__init__(*args, **xargs)
         self.connect_adjustment_to_config(
             self.builder.get_object("scroll_delta"), ("tray", "scroll_delta"))
-        self.connect_var_selector_to_config(
+        self.connect_shared_var_selector_to_config(
             combobox=self.builder.get_object("tray_icon_function"), config_property=("tray", "scroll_var"),
             allow_types=(shared_vars.NumericVar,), default_value="@volume_id",
             on_changed=lambda *_:self.app_manager.main_app.icon.update_icon())
@@ -78,7 +78,7 @@ class SettingsBase(GladeGtk):
         else: self.hide()
         return True
 
-    def connect_var_selector_to_config(self, combobox, config_property, default_value=None,
+    def connect_shared_var_selector_to_config(self, combobox, config_property, default_value=None,
             *args, on_changed=None, **xargs):
         if default_value:
             xargs["items"] = [("Default – %s"%id_to_string(self.target, default_value), default_value)]
