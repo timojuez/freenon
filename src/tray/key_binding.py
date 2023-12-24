@@ -98,7 +98,7 @@ class KeyBinding(TargetApp):
         if (var := self.target.shared_vars.get(gesture["var_id"])) is None: return
         if self._position_ref is None: return
         screen_height = get_screen_size(Gdk.Display.get_default())[1]
-        new_value = self._position_ref-int((y-self._y_ref)/screen_height*gesture["conf"]["sensitivity"])
+        new_value = self._position_ref-var.type((y-self._y_ref)/screen_height*gesture["conf"]["sensitivity"])
         if self._mouse_gesture_thread_data == (new_value, gesture): return
         max_step = Decimal(gesture["conf"]["max_step"])
         try: max_ = var.get()+max_step
