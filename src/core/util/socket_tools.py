@@ -78,9 +78,11 @@ class Base(AbstractMainloopManager):
         super().mainloop_hook()
         events = self.sel.select(5)
         with suppress(RuntimeError): self._triggering.release()
+        try: rsock = self._sockets["read"]
+        except KeyError: return #sockets closed, shutting down
         for key, mask in events:
-            if key.fileobj is self._sockets["read"]: # called trigger_mainloop()
-                try: self._sockets["read"].recv(1024)
+            if key.fileobj is rsock: # called trigger_mainloop()
+                try: rsock.recv(1024)
                 except OSError: pass
                 break
             callback = key.data
