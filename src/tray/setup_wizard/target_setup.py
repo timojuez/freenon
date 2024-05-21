@@ -93,9 +93,12 @@ class DeviceListMixin:
         print("Starting search")
         try:
             discovered = [target for x in self.devices_list for name, target in x]
-            for target in discover_targets():
-                if target in discovered: continue
-                self._add_target_to_list(target)
+            try: new_targets = discover_targets()
+            except OSError as e: print(f"[{self.__class__.__name__}] {repr(e)}")
+            else:
+                for target in new_targets:
+                    if target in discovered: continue
+                    self._add_target_to_list(target)
         finally:
             print("Finished search")
             gtk(lambda:self.builder.get_object("device_search_button").set_sensitive(True))()
