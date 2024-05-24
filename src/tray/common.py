@@ -113,6 +113,7 @@ class TrayConfig(YamlConfig):
     source = property(lambda self: self["target"]["shared_vars"]["source_id"])
     idle = property(lambda self: self["target"]["shared_vars"]["idle_id"])
     tray_var = property(lambda self: resolve_shared_var_id(self["tray"]["scroll_var"]))
+    target_source = property(lambda self: [s.strip() for s in config["target"]["source"].split(",")])
 
 
 config = TrayConfig()

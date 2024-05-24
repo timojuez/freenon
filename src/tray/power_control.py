@@ -159,7 +159,7 @@ class PowerOffMixin:
 
     def _can_poweroff(self, power, source):
         return power.get() and (
-            not source or not config["target"]["source"] or config["target"]["source"] == source.get())
+            not source or not config["target"]["source"] or source.get() in config.target_source)
 
     def poweroff(self):
         """ on suspend/shutdown """
