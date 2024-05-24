@@ -167,6 +167,7 @@ class AsyncSharedVar(SharedVarInterface, Bindable, metaclass=_MetaVar):
         class Child(cls):
             id = cls.id
             name = cls.name
+            call = property(lambda self: self.parent.call)
 
             def __init__(self, *args, **xargs):
                 super().__init__(*args, **xargs)
