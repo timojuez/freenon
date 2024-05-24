@@ -13,7 +13,7 @@ class Base(TargetApp, TargetController):
 
     def __init__(self, *args, **xargs):
         super().__init__(*args, **xargs)
-        self.target.preload_shared_vars.update((config.source, config.power))
+        self.target.preload_shared_vars.update((config.source, config.power, config.idle))
         self.target.preload_shared_vars.add("name")
         self.target.bind(
             on_shared_var_change = self.on_target_shared_var_change,
@@ -192,9 +192,7 @@ class PowerOffMixin:
 
     def on_target_power_change(self, power):
         super().on_target_power_change(power)
-        if power == True:
-            self.start_idle_timer()
-        elif power == False:
+        if power == False:
             self.stop_idle_timer()
 
     def __exit__(self, *args, **xargs):
