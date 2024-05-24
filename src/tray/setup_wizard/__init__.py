@@ -90,7 +90,7 @@ class SourceMixin(InputsMixin):
 
     def _setup_source_selector(self):
         self.source_selector = SharedVarValueCombobox(
-            self.target, self.builder.get_object("source_value"), self.source_id, items=[("None", None)])
+            self.target, self.builder.get_object("source_value"), self.source_id, items=[("All", None)])
 
     def on_selector_changed(self, *args):
         super().on_selector_changed(*args)
