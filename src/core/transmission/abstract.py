@@ -207,9 +207,9 @@ class _PreloadMixin:
         if not self._preload_iteration_completed:
             self._preload(10)
         else:
-            if self._preload_timeout and self._preload_timeout > datetime.now(): return
-            self._preload_timeout = datetime.now()+timedelta(seconds=1)
-            self._preload(2)
+            if self._preload_timeout and self._preload_timeout > datetime.now(): return # no timeout yet
+            self._preload_timeout = datetime.now()+timedelta(seconds=4)
+            self._preload(8)
 
     def _preload(self, max_polls):
         if not self._preload_shared_vars_iter: self._preload_shared_vars_iter = iter(self.preload_shared_vars)
