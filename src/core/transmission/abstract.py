@@ -179,10 +179,7 @@ class GroupedSet:
     def __delitem__(self, key): del self.data[key]
 
     def __iter__(self):
-        def iter():
-            for group, s in sorted(self.data.items(), reverse=True):
-                for e in s: yield e
-        return iter()
+        return {e:None for group, l in sorted(self.data.items(), reverse=True) for e in l}.__iter__()
 
 
 class _PreloadMixin:
