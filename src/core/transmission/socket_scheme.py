@@ -62,7 +62,7 @@ class SocketClient(_IO, socket_tools.Client, AbstractClient):
     @host is the server's hostname or IP.
     """
     init_args_help = ("//SERVER_IP", "SERVER_PORT")
-    _pulse = "" # this is being sent regularly to keep connection
+    _pulse = None # this is being sent regularly to keep connection
     _next_pulse = datetime.fromtimestamp(0)
     _reconnects = 0
 
