@@ -700,8 +700,13 @@ class SoundModeSetting(_SoundModeSettings, SelectVar):
             self.on_change(self.get()) # cause listeners to update from self.translation
         
     def matches(self, data): return super().matches(data) and data[len(self.function)+2] == "1"
-    def serialize_val(self, val): return "%s1%s"%(super().serialize_val(val)[:2], val)
-    def unserialize_val(self, data): return data[3:]
+
+    def serialize(self, val):
+        s = list(super().serialize(val)[0]+val)
+        s[len(self.function)+2] = "1"
+        return ["".join(s)]
+
+    def unserialize(self, data): return data[0][len(self.function)+3:]
 
     def _send(self, *args, **xargs):
         if isinstance(self.target, ClientType): return super()._send(*args, **xargs)
@@ -764,8 +769,8 @@ class QuickSelectStore(shared_vars.ClientToServerVarMixin, _QuickSelect):
     
     # for server:
     def matches(self, data): return super().matches(data) and data.endswith("MEMORY")
-    def serialize_val(self, value): return f"{super().serialize_val(value)} MEMORY"
-    def unserialize_val(self, data): return super().unserialize_val(data.split(" ",1)[0])
+    def serialize(self, value): return [f"{e} MEMORY" for e in super().serialize(value)]
+    def unserialize(self, data): return super().unserialize([e.rsplit(" ",1)[0] for e in data])
     
     def on_change(self, val):
         super().on_change(val)
