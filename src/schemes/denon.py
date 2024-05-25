@@ -193,17 +193,17 @@ class _DenonVar:
     call = property(lambda self: "%s?"%self.function)
     
     def serialize(self, value):
-        return ["%s%s"%(self.function, self.serialize_val(value))]
-    
+        return ["%s%s"%(self.function, e) for e in super().serialize(self.serialize_val(value))]
+
     def serialize_val(self, value): return value
 
     def unserialize(self, data):
         assert(len(data) == 1)
         param = data[0][len(self.function):]
-        return self.unserialize_val(param)
+        return super().unserialize([self.unserialize_val(param)])[0]
 
     def unserialize_val(self, data): return data
-        
+
     def matches(self, cmd):
         return cmd.startswith(self.function) #and " " not in cmd.replace(self.function,"",1)
 

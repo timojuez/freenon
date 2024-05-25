@@ -106,11 +106,11 @@ class SharedVarInterface(object):
         
     def serialize(self, value):
         """ transform @value to list of strings """
-        raise NotImplementedError()
+        return [value]
 
     def unserialize(self, data):
         """ transform list of strings @data to type self.type """
-        raise NotImplementedError()
+        return data
 
 
 class _MetaVar(type):
