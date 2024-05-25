@@ -219,24 +219,13 @@ class DenonVar(_DenonVar):
         self.target.schedule(func, requires=(DevicePower.id,))
 
 
-class _Translation:
-    translation = {} #{return_string:value} unserialize return_string to value / serialize vice versa
-
-    options = property(lambda self: list(self.translation.values()))
-    
-    def unserialize_val(self, val): return self.translation.get(val,val)
-        
-    def serialize_val(self, val):
-        return {val:key for key,val in self.translation.items()}.get(val,val)
-
-
-class _Bool(_Translation):
+class _Bool:
     translation = {"ON":True, "OFF":False}
 
 
 ######### Data Types
 
-class SelectVar(_Translation, DenonVar, shared_vars.SelectVar): pass
+class SelectVar(DenonVar, shared_vars.SelectVar): pass
 
 class DynamicSelectVar(SelectVar):
     """ SelectVar that reads its translation property from another variable """

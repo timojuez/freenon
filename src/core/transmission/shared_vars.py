@@ -237,7 +237,7 @@ class AsyncSharedVar(SharedVarInterface, Bindable, metaclass=_MetaVar):
         #with suppress(ValueError): self.target._polled.remove(self.call)
 
     def async_poll(self, *args, **xargs): self.target.poll_shared_var_value(self, *args, **xargs)
-    
+
     def poll_on_client(self):
         """ async_poll() executed on client side """
         if self.default_value is not None:
@@ -379,8 +379,14 @@ class IntVar(NumericVar):
 
 class SelectVar(SharedVar):
     type=str
-    options = []
+    translation = {} #{return_string:value} unserialize return_string to value / serialize vice versa
+    translation_inversed = property(lambda self: {val:key for key,val in self.translation.items()})
+    options = property(lambda self: list(self.translation.values()))
     dummy_value = property(lambda self: self.default_value or (self.options[0] if self.options else "?"))
+
+    def serialize(self, val): return [self.translation_inversed.get(val,val)]
+
+    def unserialize(self, data): return [self.translation.get(val,val) for val in data]
 
     def remote_set(self, value, force=False):
         if not force and value not in self.options:
@@ -388,7 +394,7 @@ class SelectVar(SharedVar):
                 "Value must be one of %s or try target.shared_vars.%s.remote_set(value, force=True)"
                 %(self.options, self.id))
         return super().remote_set(value, force)
-    
+
 
 class BoolVar(SelectVar):
     type=bool
