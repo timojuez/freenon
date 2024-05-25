@@ -277,7 +277,7 @@ class NumericVar(DenonVar):
     """ add UP/DOWN value decoding capability """
     step = 1
 
-    def unserialize_val(self, val):
+    def parse_relative_interval(self, val):
         if val == "UP": return self.get()+self.step
         elif val == "DOWN": return self.get()-self.step
         else: raise ValueError(f"Invalid value `{val}` for shared variable `{self.id}`")
@@ -294,7 +294,7 @@ class DecimalVar(NumericVar, shared_vars.DecimalVar):
     def _roundVolume(self, vol): return self.step*round(vol/self.step)
 
     def unserialize_val(self, val):
-        return Decimal(val.ljust(3,"0"))/10 if val.isnumeric() else super().unserialize_val(val)
+        return Decimal(val.ljust(3,"0"))/10 if val.isnumeric() else self.parse_relative_interval(val)
 
     def serialize_val(self, val):
         val = self._roundVolume(val)
@@ -309,7 +309,7 @@ class IntVar(NumericVar, shared_vars.IntVar):
         return ("%%0%dd"%digits)%val
     
     def unserialize_val(self, val):
-        return int(val) if val.isnumeric() else super().unserialize_val(val)
+        return int(val) if val.isnumeric() else self.parse_relative_interval(val)
 
 class PowerVar(_Bool, _DenonVar, shared_vars.BoolVar): pass
 
