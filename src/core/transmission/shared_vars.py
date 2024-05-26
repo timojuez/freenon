@@ -408,11 +408,11 @@ class DecimalVar(NumericVar):
     dummy_value = property(lambda self: self.default_value or Decimal(self.max+self.min)/2)
 
     @classmethod
-    def _roundVolume(self, vol):
-        return self.step*round(vol/self.step) if self.step else vol
+    def _round(self, val):
+        return self.step*round(val/self.step) if self.step else val
 
     def remote_set(self, value, force=False):
-        value = self._roundVolume(self.type(value))
+        value = self._round(self.type(value))
         return super().remote_set(value, force)
 
     def set(self, val):

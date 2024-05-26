@@ -1437,10 +1437,10 @@ for cat_code, cat_id, cat_name, l in EQ_OPTIONS:
                 return {i: Decimal(v)/10-50 for i, v in enumerate(data.split(":"))}
 
             def set_value(self, key, val):
-                self.set({**self.get(), key:DecimalVar._roundVolume(val)})
+                self.set({**self.get(), key:DecimalVar._round(val)})
 
             def remote_set_value(self, key, val, *args, **xargs):
-                self.remote_set({**self.get(), key:DecimalVar._roundVolume(val)}, *args, **xargs)
+                self.remote_set({**self.get(), key:DecimalVar._round(val)}, *args, **xargs)
 
 
         for bound, bound_name in enumerate(EQ_BOUNDS):
