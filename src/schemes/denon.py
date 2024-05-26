@@ -279,14 +279,10 @@ class DecimalVar(NumericVar, shared_vars.DecimalVar):
 
     def __str__(self): return "%0.1f"%self.get() if self.is_set() else super().__str__()
 
-    @classmethod
-    def _roundVolume(self, vol): return self.step*round(vol/self.step)
-
     def unserialize_val(self, val):
         return Decimal(val.ljust(3,"0"))/10 if val.isnumeric() else self.parse_relative_interval(val)
 
     def serialize_val(self, val):
-        val = self._roundVolume(val)
         return "%02d"%val if val%1 == 0 else "%03d"%(val*10)
 
 

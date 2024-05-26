@@ -404,10 +404,16 @@ class BoolVar(SelectVar):
 
 class DecimalVar(NumericVar):
     type=Decimal
+    step=None
     dummy_value = property(lambda self: self.default_value or Decimal(self.max+self.min)/2)
-    
+
+    @classmethod
+    def _roundVolume(self, vol):
+        return self.step*round(vol/self.step) if self.step else vol
+
     def remote_set(self, value, force=False):
-        return super().remote_set((Decimal(value) if isinstance(value, int) else value), force)
+        value = self._roundVolume(self.type(value))
+        return super().remote_set(value, force)
 
     def set(self, val):
         super().set(Decimal(val) if isinstance(val, int) else val)
