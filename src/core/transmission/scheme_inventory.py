@@ -7,7 +7,8 @@ schemes = {
     "dummyemulate": ".emulate.DummyEmulate",
     "telnet": ".telnet.Telnet",
     "auto": ".auto.Auto",
-    "repeat": ".repeat.Repeat"
+    "repeat": ".repeat.Repeat",
+    "yamaha": ".yamaha.Yamaha",
 }
 
 
