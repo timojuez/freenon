@@ -77,7 +77,7 @@ class SharedVars(AttrDict):
 class SharedVarInterface(object):
     name = "Short description"
     category = "Misc"
-    call = None # for retrieval, call target.send(call)
+    call = property(lambda self: self.value_to_code("?")) # for retrieval, call target.send(call)
     default_value = None # if no response from server
     dummy_value = None # for dummy server
     type = object # value data type, e.g. int, bool, str
@@ -96,22 +96,26 @@ class SharedVarInterface(object):
         """ This is being executed on server side when the client tries to set a value.
         It shall call self.set(value) """
         raise NotImplementedError()
-    
+
+    def value_to_code(self, value): raise NotImplementedError()
+
+    def code_to_value(self, code): raise NotImplementedError()
+
     def matches(self, data):
         """
         @data: line received from target
         return True if data shall be parsed with this class
         """
-        raise NotImplementedError()
+        return data.startswith(self.value_to_code(""))
         
     def serialize(self, value):
         """ transform @value to list of strings """
-        return [value]
+        return [self.value_to_code(value)]
 
     def unserialize(self, data):
         """ transform list of strings @data to type self.type """
         assert(len(data) == 1)
-        return data[0]
+        return self.code_to_value(data[0])
 
 
 class _MetaVar(type):

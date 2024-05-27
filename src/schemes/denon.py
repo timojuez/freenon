@@ -190,17 +190,17 @@ class _DenonVar:
     """ Handles Denon format "@function@value" """
     
     function = None #str, Denon function command
-    call = property(lambda self: "%s?"%self.function)
+
+    def value_to_code(self, val): return "%s%s"%(self.function, val)
+    def code_to_value(self, code): return code[len(self.function):]
     
     def serialize(self, value):
-        return ["%s%s"%(self.function, e) for e in super().serialize(self.serialize_val(value))]
+        return super().serialize(self.serialize_val(value))
 
     def serialize_val(self, value): return value
 
     def unserialize(self, data):
-        assert(len(data) == 1)
-        param = data[0][len(self.function):]
-        return super().unserialize([self.unserialize_val(param)])
+        return self.unserialize_val(super().unserialize(data))
 
     def unserialize_val(self, data): return data
 

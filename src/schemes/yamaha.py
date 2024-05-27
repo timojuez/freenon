@@ -26,18 +26,9 @@ class _YamahaVar:
     
     zone = "MAIN" #str
     function = None #str
-    call = property(lambda self: self._to_code("?"))
 
-    def _to_code(self, value): return f"@{self.zone}:{self.function}={value}"
-    
-    def matches(self, cmd):
-        return cmd.startswith(self._to_code(""))
-
-    def serialize(self, value):
-        return [self._to_code(e) for e in super().serialize(value)]
-    
-    def unserialize(self, data):
-        return super().unserialize(list(map(lambda code: code.split("=", 1)[-1], data)))
+    def value_to_code(self, value): return f"@{self.zone}:{self.function}={value}"
+    def code_to_value(self, code): return code.split("=", 1)[-1]
 
 
 class _SelectVar(_YamahaVar, shared_vars.SelectVar): pass
