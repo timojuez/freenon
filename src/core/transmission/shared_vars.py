@@ -468,6 +468,7 @@ class ServerToClientVarMixin:
 
 class OfflineVarMixin:
     """ Inherit if the value shall not ever be transmitted """
+    call = None
 
     def matches(self, data): return False
     def remote_set(self, *args, **xargs): raise ValueError("Cannot set value!")
