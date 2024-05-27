@@ -110,7 +110,8 @@ class SharedVarInterface(object):
 
     def unserialize(self, data):
         """ transform list of strings @data to type self.type """
-        return data
+        assert(len(data) == 1)
+        return data[0]
 
 
 class _MetaVar(type):
@@ -384,9 +385,11 @@ class SelectVar(SharedVar):
     options = property(lambda self: list(self.translation.values()))
     dummy_value = property(lambda self: self.default_value or (self.options[0] if self.options else "?"))
 
-    def serialize(self, val): return [self.translation_inversed.get(val,val)]
+    def serialize(self, val): return super().serialize(self.translation_inversed.get(val,val))
 
-    def unserialize(self, data): return [self.translation.get(val,val) for val in data]
+    def unserialize(self, data):
+        val = super().unserialize(data)
+        return self.translation.get(val,val)
 
     def remote_set(self, value, force=False):
         if not force and value not in self.options:

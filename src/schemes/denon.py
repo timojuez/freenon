@@ -200,7 +200,7 @@ class _DenonVar:
     def unserialize(self, data):
         assert(len(data) == 1)
         param = data[0][len(self.function):]
-        return super().unserialize([self.unserialize_val(param)])[0]
+        return super().unserialize([self.unserialize_val(param)])
 
     def unserialize_val(self, data): return data
 

@@ -37,9 +37,7 @@ class _YamahaVar:
         return [self._to_code(e) for e in super().serialize(value)]
     
     def unserialize(self, data):
-        assert(len(data) == 1)
-        param = data[0].split("=", 1)[-1]
-        return super().unserialize([param])[0]
+        return super().unserialize(list(map(lambda code: code.split("=", 1)[-1], data)))
 
 
 class _SelectVar(_YamahaVar, shared_vars.SelectVar): pass
