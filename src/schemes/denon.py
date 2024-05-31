@@ -7,6 +7,7 @@ from urllib.parse import urlparse
 from threading import Timer
 from decimal import Decimal, InvalidOperation
 from ..core import shared_vars, SocketScheme
+from ..core.transmission.shared_vars import Category
 from ..core.transmission.types import ClientType, ServerType
 
 
@@ -133,20 +134,6 @@ INPUTS = {
     ("VDO", "VD", "video", "Video"),
     ("HDM", "HD", "hdmi", "HDMI"),
 }
-
-Category = type("Category", tuple(), dict(
-    GENERAL = "General",
-    VOLUME = "Volume",
-    INPUT = "Input",
-    SPEAKERS = "Speakers",
-    AUDIO = "Audio",
-    VIDEO = "Video",
-    BASS = "Bass",
-    EQUALIZER = "Equalizer",
-    AUDYSSEY = "Audyssey",
-    ECO = "Eco",
-    **{f"ZONE_{zone}": f"Zone {zone}" for zone in ZONES}
-))
 
 DUMMY_MODEL = "X7800H"
 
@@ -1577,7 +1564,7 @@ class EcoPod(SelectVar): #undocumented
 for zone in ZONES:
     
     class Zone:
-        category = getattr(Category, f"ZONE_{zone}")
+        category = Category.zone(zone)
     
     @Denon.shared_var
     class ZVolume(Zone, Volume):

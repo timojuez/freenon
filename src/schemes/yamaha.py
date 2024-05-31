@@ -3,9 +3,9 @@ from ..core import shared_vars, SocketScheme
 from ..core.transmission.types import ClientType, ServerType
 
 ZONES = [
-    # command, id_prefix, name
-    ("MAIN", "", "Main Zone"),
-    ("ZONE2", "zone2_", "Zone 2"),
+    # command, id_prefix, zone_category_id
+    ("MAIN", "", 0),
+    ("ZONE2", "zone2_", 2),
 ]
 
 
@@ -58,11 +58,11 @@ class Power(_Power):
     zone="SYS"
 
 
-for zone, zone_id, zone_name in ZONES:
+for zone, zone_id, category_id in ZONES:
 
     class Zone:
         zone=zone
-        category=zone_name
+        category=shared_vars.Category.zone(category_id)
 
     @Yamaha.shared_var
     class Power(Zone, _Power):

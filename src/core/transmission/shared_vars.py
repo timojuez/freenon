@@ -60,6 +60,23 @@ class FunctionCall(object):
                 %(self.__class__.__name__, self._func.__name__), file=sys.stderr)
 
 
+Category = type("Category", tuple(), dict(
+    GENERAL = "General",
+    VOLUME = "Volume",
+    INPUT = "Input",
+    SPEAKERS = "Speakers",
+    AUDIO = "Audio",
+    VIDEO = "Video",
+    BASS = "Bass",
+    EQUALIZER = "Equalizer",
+    AUDYSSEY = "Audyssey",
+    ECO = "Eco",
+    MAIN = "Main Zone",
+    ZONE = "Zone %s",
+    zone = classmethod(lambda self, zone: self.MAIN if zone == 0 else self.ZONE%zone)
+))
+
+
 class SharedVars(AttrDict):
     
     def wait_for(self, *shared_vars):
