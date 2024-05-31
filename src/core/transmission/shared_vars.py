@@ -392,6 +392,8 @@ SharedVar = SynchronousSharedVar
 class NumericVar(SharedVar):
     min=0
     max=99
+    step=None
+    digits = property(lambda self: math.floor(math.log10((self.max-self.min)/(self.step or 1)))+1)
 
 
 class IntVar(NumericVar):
@@ -428,7 +430,6 @@ class BoolVar(SelectVar):
 
 class DecimalVar(NumericVar):
     type=Decimal
-    step=None
     dummy_value = property(lambda self: self.default_value or Decimal(self.max+self.min)/2)
 
     @classmethod
