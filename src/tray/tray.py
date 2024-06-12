@@ -218,7 +218,7 @@ class Icon(Bindable):
             on_shared_var_change=self.on_shared_var_change)
         self.target.preload_shared_vars[10].update(self.relevant_vars())
 
-    def relevant_vars(self): return config.tray_var, config.muted, config.power
+    def relevant_vars(self): return config.tray_var, config.mute, config.power
 
     def on_shared_var_change(self, var_id, value, *args): # bound to target
         if var_id in self.relevant_vars(): self.update_icon()
@@ -227,7 +227,7 @@ class Icon(Bindable):
         var = self.target.shared_vars.get(config.tray_var)
         if (power := self.target.shared_vars.get(config.power)) and power.is_set() and power.get() == False:
             return self.set_icon("power")
-        if (muted := self.target.shared_vars.get(config.muted)) and muted.is_set() and muted.get():
+        if (mute := self.target.shared_vars.get(config.mute)) and mute.is_set() and mute.get():
             return self.set_icon("audio-volume-muted")
         if var and var.is_set():
             var_val = var.get()
@@ -312,7 +312,7 @@ class TrayMixin(Tray):
 
     def __init__(self, *args, **xargs):
         super().__init__(*args,**xargs)
-        self.target.preload_shared_vars.update((config.tray_var, config.muted))
+        self.target.preload_shared_vars.update((config.tray_var, config.mute))
         self.icon = Icon(self.target)
         self.icon.bind(on_change = self.on_icon_change)
         self.show()

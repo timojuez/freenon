@@ -41,7 +41,7 @@ class InputsMixin(TargetSetup):
     input_settings = [
         # v name,   type
         ("power",   shared_vars.BoolVar),
-        ("muted",   shared_vars.BoolVar),
+        ("mute",    shared_vars.BoolVar),
         ("idle",    shared_vars.BoolVar),
         ("source",  shared_vars.SelectVar),
         ("volume",  shared_vars.NumericVar)

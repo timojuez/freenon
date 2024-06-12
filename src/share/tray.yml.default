@@ -16,7 +16,7 @@ target:
         power_id: power
         source_id: source
         volume_id: volume
-        muted_id: muted
+        mute_id: mute
         idle_id: idle
     # Amp input source that this program controls. Important for power control. Empty means "all"
     source:
@@ -52,7 +52,7 @@ hotkeys:
       - var: '@volume_id'
         step: 3
         key: <ctrl>+<media_volume_up>
-      - var: '@muted_id'
+      - var: '@mute_id'
         step: 3
         key: <ctrl>+<media_volume_mute>
 

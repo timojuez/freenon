@@ -108,7 +108,7 @@ class TrayConfig(YamlConfig):
 
     def __init__(self): super().__init__("tray.yml")
     volume = property(lambda self: self["target"]["shared_vars"]["volume_id"])
-    muted = property(lambda self: self["target"]["shared_vars"]["muted_id"])
+    mute = property(lambda self: self["target"]["shared_vars"]["mute_id"])
     power = property(lambda self: self["target"]["shared_vars"]["power_id"])
     source = property(lambda self: self["target"]["shared_vars"]["source_id"])
     idle = property(lambda self: self["target"]["shared_vars"]["idle_id"])

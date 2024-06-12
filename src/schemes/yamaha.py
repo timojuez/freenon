@@ -85,7 +85,7 @@ for zone, zone_id, category_id in ZONES:
 
     @Yamaha.shared_var
     class Mute(_Mute, _BoolVar):
-        id=f"{zone_id}muted"
+        id=f"{zone_id}mute"
         
         def unserialize(self, data):
             return super().unserialize(data) == True

@@ -471,7 +471,7 @@ class DevicePower(PowerVar):
 
 
 @Denon.shared_var
-class Muted(BoolVar):
+class Mute(BoolVar):
     category = Category.VOLUME
     function = "MU"
 
@@ -1344,7 +1344,7 @@ class PowerOnLevel(SelectVar):
     category = Category.VOLUME
     function = "SSVCTZMAPON "
     call = "SSVCTZMA ?"
-    translation = {"MUT":"Muted", "LAS":"Unchanged"}
+    translation = {"MUT":"Mute", "LAS":"Unchanged"}
     def on_change(self, val):
         super().on_change(val)
         if not self.target.shared_vars.power_on_level_numeric.is_set():
@@ -1607,9 +1607,9 @@ for zone in ZONES:
             self._from_mainzone = False
     
     @Denon.shared_var
-    class ZMuted(Zone, Muted):
-        name = "Zone %s Muted"%zone
-        id = "zone%s_muted"%zone
+    class ZMute(Zone, Mute):
+        name = "Zone %s Mute"%zone
+        id = "zone%s_mute"%zone
         function = "Z%sMU"%zone
     
     @Denon.shared_var
