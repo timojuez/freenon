@@ -73,15 +73,14 @@ class HotkeySetting(_Shortcut):
 
     def on_hotkey_button_clicked(self, widget, i):
         def on_press(key):
-            key = listener.canonical(key)
             if key == keyboard.Key.esc:
                 print("ESC is not allowed.")
-            elif key in (keyboard.Key.ctrl, keyboard.Key.alt, keyboard.Key.shift):
-                modifiers.add(key)
+            elif hasattr(key, "value") and key.value in keyboard._NORMAL_MODIFIERS:
+                modifiers.append(keyboard._NORMAL_MODIFIERS[key.value])
                 return
             else:
-                tostr = lambda key: key.char if isinstance(key, keyboard.KeyCode) else f"<{key.name}>"
-                try: code = "+".join(list(map(tostr, [*modifiers, key])))
+                tostr = lambda key: key.char.upper() if isinstance(key, keyboard.KeyCode) else f"<{key.name}>"
+                try: code = "+".join(list(map(tostr, [*set(modifiers), key])))
                 except TypeError: traceback.print_exc()
                 else:
                     config["hotkeys"]["keyboard"][i]["key"] = code
@@ -91,14 +90,14 @@ class HotkeySetting(_Shortcut):
             done.append(True)
 
         def on_release(key):
-            try: modifiers.remove(listener.canonical(key))
-            except (ValueError, KeyError): pass
+            try: modifiers.remove(keyboard._NORMAL_MODIFIERS[key.value])
+            except (ValueError, KeyError, AttributeError): pass
             if done:
                 gtk(Gdk.Seat.ungrab)(seat)
                 listener.stop()
                 self.app._can_close = True
 
-        modifiers = set()
+        modifiers = []
         done = []
         self.app._can_close = False
         widget.set_label("Press key ...")
