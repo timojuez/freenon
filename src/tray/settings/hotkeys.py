@@ -51,7 +51,7 @@ class HotkeySetting(_Shortcut):
         combobox = self.attach(Gtk.ComboBox())
         self.app.connect_shared_var_selector_to_config(
             combobox=combobox, config_property=("hotkeys", "keyboard", self.i, "var"),
-            allow_types=(shared_vars.NumericVar, shared_vars.BoolVar), default_value="@volume_id")
+            allow_types=(shared_vars.NumericVar, shared_vars.BoolVar))
         self.spin = self.attach(Gtk.SpinButton())
         self.show_spin()
         combobox.connect("changed", self.show_spin)
@@ -126,7 +126,7 @@ class MouseGesture(_Shortcut):
         self.app.connect_shared_var_selector_to_config(
             combobox=function,
             config_property=("hotkeys", "mouse", self.i, "var"),
-            allow_types=(shared_vars.NumericVar,), default_value="@volume_id")
+            allow_types=(shared_vars.NumericVar,))
         sensitivity = self.attach(Gtk.SpinButton())
         adj = Gtk.Adjustment()
         adj.configure(0, 1, 1000, 1, 10, 1)
