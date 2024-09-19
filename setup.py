@@ -16,7 +16,7 @@ setup(name=PKG_NAME,
       license='GNU General Public License v3 or later (GPLv3+)',
       packages=[PKG_NAME],
       package_dir={PKG_NAME: "src"},
-      install_requires=["argparse"],
+      install_requires=["argparse", "pyyaml"],
       extras_require={
         "tray": [
             "PyGObject",
